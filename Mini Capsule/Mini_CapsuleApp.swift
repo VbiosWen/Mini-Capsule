@@ -19,6 +19,8 @@ class CapsuleAppDelegate: NSObject, NSApplicationDelegate {
         }
     }()
 
+    let settingsStore = SettingsStore()
+
     private var capsuleWindowController: CapsuleWindowController?
     private var clipboardMonitor: ClipboardMonitor?
 
@@ -78,6 +80,19 @@ struct Mini_CapsuleApp: App {
         .commands {
             CommandGroup(replacing: .newItem) {}
         }
+
+        Settings {
+            TabView {
+                ClipboardSettingsView()
+                    .tabItem { Label("剪贴板", systemImage: "doc.on.clipboard") }
+                ShortcutsSettingsView()
+                    .tabItem { Label("快捷键", systemImage: "command") }
+                AdvancedSettingsView()
+                    .tabItem { Label("高级", systemImage: "ellipsis.curlybraces") }
+            }
+        }
+        .environmentObject(appDelegate.settingsStore)
+        .modelContainer(CapsuleAppDelegate.sharedModelContainer)
         #else
         // iOS / visionOS: keep existing behavior
         WindowGroup {
