@@ -23,18 +23,23 @@ struct CapsuleExpandedView: View {
                     .textFieldStyle(.plain)
                     .font(.system(size: 13))
 
-                Button(action: {
-                    if #available(macOS 14.0, *) {
-                        NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
-                    } else {
-                        NSApp.sendAction(Selector(("showPreferencesWindow:")), to: nil, from: nil)
+                if #available(macOS 14.0, *) {
+                    SettingsLink {
+                        Image(systemName: "gear")
+                            .foregroundColor(.secondary)
+                            .font(.system(size: 13))
                     }
-                }) {
-                    Image(systemName: "gear")
-                        .foregroundColor(.secondary)
-                        .font(.system(size: 13))
+                    .buttonStyle(.plain)
+                } else {
+                    Button(action: {
+                        NSApp.sendAction(Selector(("showPreferencesWindow:")), to: nil, from: nil)
+                    }) {
+                        Image(systemName: "gear")
+                            .foregroundColor(.secondary)
+                            .font(.system(size: 13))
+                    }
+                    .buttonStyle(.plain)
                 }
-                .buttonStyle(.plain)
             }
             .padding(.horizontal, 12)
             .padding(.vertical, 8)
