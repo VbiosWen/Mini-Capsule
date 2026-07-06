@@ -12,6 +12,8 @@ struct CapsuleExpandedView: View {
         sort: [SortDescriptor(\ClipItem.timestamp, order: .reverse)]
     ) private var allItems: [ClipItem]
 
+    @State private var previewingItemID: UUID?
+
     var body: some View {
         VStack(spacing: 0) {
             // Search bar
@@ -22,6 +24,9 @@ struct CapsuleExpandedView: View {
                 TextField("搜索...", text: $searchText)
                     .textFieldStyle(.plain)
                     .font(.system(size: 13))
+                    .onChange(of: searchText) { _, _ in
+                        previewingItemID = nil
+                    }
 
                 Button(action: {}) {
                     Image(systemName: "gear")
@@ -41,8 +46,17 @@ struct CapsuleExpandedView: View {
                     ForEach(filteredItems) { item in
                         ClipItemRow(
                             item: item,
-                            onTap: { onItemTap(item) },
-                            onDelete: { onItemDelete(item) }
+                            onTap: {
+                                previewingItemID = nil
+                                onItemTap(item)
+                            },
+                            onDelete: {
+                                previewingItemID = nil
+                                onItemDelete(item)
+                            },
+                            onPreviewStateChanged: { isShowing in
+                                previewingItemID = isShowing ? item.id : nil
+                            }
                         )
 
                         Divider()
@@ -70,11 +84,8 @@ struct CapsuleExpandedView: View {
         .frame(width: 280, height: 360)
         .background {
             ZStack {
-                // Base material
                 Rectangle()
                     .fill(.ultraThinMaterial)
-
-                // Drag-primed glow overlay
                 if isDragPrimed {
                     Rectangle()
                         .fill(Color.white.opacity(0.1))
