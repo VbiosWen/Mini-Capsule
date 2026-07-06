@@ -11,6 +11,8 @@ final class ClipItem {
     var contentTypeRaw: String
     var textContent: String?
     var imageData: Data?
+    var imageFileName: String?
+    var imageMD5: String?
     var fileBookmarks: Data?
     var isPinned: Bool
     var sourceAppBundleID: String?
@@ -23,6 +25,8 @@ final class ClipItem {
         contentTypeRaw: String,
         textContent: String? = nil,
         imageData: Data? = nil,
+        imageFileName: String? = nil,
+        imageMD5: String? = nil,
         fileBookmarks: Data? = nil,
         isPinned: Bool = false,
         sourceAppBundleID: String? = nil
@@ -34,6 +38,8 @@ final class ClipItem {
         self.contentTypeRaw = contentTypeRaw
         self.textContent = textContent
         self.imageData = imageData
+        self.imageFileName = imageFileName
+        self.imageMD5 = imageMD5
         self.fileBookmarks = fileBookmarks
         self.isPinned = isPinned
         self.sourceAppBundleID = sourceAppBundleID
