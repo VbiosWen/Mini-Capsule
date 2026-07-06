@@ -76,6 +76,15 @@ final class ClipboardMonitor: ObservableObject {
         _ pb: NSPasteboard,
         types: [NSPasteboard.PasteboardType]
     ) -> (type: String, text: String?, image: Data?, fileBookmarks: Data?)? {
+        // Check image first — some apps put both fileURL and PNG on pasteboard
+        if types.contains(.png), let data = pb.data(forType: .png) {
+            let image = capImageSize(data, maxBytes: 2_000_000)
+            return ("image", nil, image, nil)
+        }
+        if types.contains(.tiff), let data = pb.data(forType: .tiff) {
+            let image = capImageSize(data, maxBytes: 2_000_000)
+            return ("image", nil, image, nil)
+        }
         if types.contains(.fileURL),
            let urls = pb.readObjects(forClasses: [NSURL.self], options: nil) as? [URL],
            let firstURL = urls.first {
@@ -85,10 +94,6 @@ final class ClipboardMonitor: ObservableObject {
                 relativeTo: nil
             )
             return ("file", nil, nil, bookmarks)
-        }
-        if types.contains(.png), let data = pb.data(forType: .png) {
-            let image = capImageSize(data, maxBytes: 2_000_000)
-            return ("image", nil, image, nil)
         }
         if let text = pb.string(forType: .string) {
             return ("text", text, nil, nil)
