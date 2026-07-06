@@ -11,7 +11,7 @@ struct ClipItemRow: View {
     var body: some View {
         HStack(spacing: 10) {
             typeIcon
-                .frame(width: 28, height: 28)
+                .frame(width: 36, height: 36)
                 .background(.quaternary)
                 .clipShape(RoundedRectangle(cornerRadius: 6))
 
@@ -56,13 +56,14 @@ struct ClipItemRow: View {
         }
     }
 
+    // MARK: - Image Preview
+
     @ViewBuilder
     private func imagePreview(_ nsImage: NSImage) -> some View {
         let imageSize = nsImage.size
         let maxWidth: CGFloat = 200
         let maxHeight: CGFloat = 300
 
-        // Calculate display size: min(original, max), preserving aspect ratio
         let scaleX = imageSize.width > maxWidth ? maxWidth / imageSize.width : 1.0
         let scaleY = imageSize.height > maxHeight ? maxHeight / imageSize.height : 1.0
         let scale = min(scaleX, scaleY)
@@ -78,29 +79,40 @@ struct ClipItemRow: View {
             .shadow(color: .black.opacity(0.15), radius: 8, y: 4)
     }
 
+    // MARK: - Type Icon / Thumbnail
+
+    @ViewBuilder
     private var typeIcon: some View {
+        if item.contentTypeRaw == "image", let imageData = item.imageData, let nsImage = NSImage(data: imageData) {
+            Image(nsImage: nsImage)
+                .resizable()
+                .aspectRatio(contentMode: .fill)
+                .frame(width: 36, height: 36)
+        } else {
+            iconForType
+                .font(.system(size: 15))
+        }
+    }
+
+    private var iconForType: some View {
         switch item.contentTypeRaw {
         case "text":
             return Image(systemName: "doc.text")
-                .font(.system(size: 13))
-        case "image":
-            return Image(systemName: "photo")
-                .font(.system(size: 13))
         case "file":
             return Image(systemName: "doc")
-                .font(.system(size: 13))
         default:
             return Image(systemName: "questionmark")
-                .font(.system(size: 13))
         }
     }
+
+    // MARK: - Preview Text
 
     private var previewText: String {
         switch item.contentTypeRaw {
         case "text":
             return item.textContent?.prefix(50).replacingOccurrences(of: "\n", with: " ") ?? ""
         case "image":
-            return "图片"
+            return item.imageFileName ?? "图片"
         case "file":
             return "文件"
         default:
