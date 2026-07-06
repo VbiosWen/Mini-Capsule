@@ -8,6 +8,37 @@ import ApplicationServices
 final class PasteService {
     static var isSelfPaste = false
 
+    /// Copy item to clipboard only (no auto-paste). Updates usage stats.
+    static func copyToClipboard(_ item: ClipItem) {
+        isSelfPaste = true
+        defer { isSelfPaste = false }
+
+        let pasteboard = NSPasteboard.general
+        pasteboard.clearContents()
+
+        switch item.contentTypeRaw {
+        case "text":
+            pasteboard.setString(item.textContent ?? "", forType: .string)
+        case "image":
+            if let data = item.imageData {
+                pasteboard.setData(data, forType: .png)
+            }
+        case "file":
+            if let bookmarkData = item.fileBookmarks {
+                var isStale = false
+                if let url = try? URL(
+                    resolvingBookmarkData: bookmarkData,
+                    options: [],
+                    bookmarkDataIsStale: &isStale
+                ) {
+                    pasteboard.writeObjects([url as NSURL])
+                }
+            }
+        default:
+            break
+        }
+    }
+
     static func paste(_ item: ClipItem, context: ModelContext) {
         // Check accessibility permissions before attempting CGEvent simulation
         let options: NSDictionary = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: false]

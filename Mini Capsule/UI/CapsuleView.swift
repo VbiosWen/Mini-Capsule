@@ -21,7 +21,10 @@ struct CapsuleView: View {
                 CapsuleExpandedView(
                     searchText: $searchText,
                     onItemTap: { item in
-                        PasteService.paste(item, context: modelContext)
+                        PasteService.copyToClipboard(item)
+                        item.pasteCount += 1
+                        item.lastPastedAt = Date()
+                        try? modelContext.save()
                     },
                     onItemDelete: { item in
                         withAnimation {
