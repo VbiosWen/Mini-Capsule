@@ -2,6 +2,7 @@
 import AppKit
 import SwiftData
 import Combine
+import CryptoKit
 
 @MainActor
 final class ClipboardMonitor: ObservableObject {
@@ -39,16 +40,43 @@ final class ClipboardMonitor: ObservableObject {
         guard let pbTypes = pasteboard.types,
               let content = readPasteboard(pasteboard, types: pbTypes) else { return }
 
-        // Deduplicate against most recent item
+        // MD5-based dedup for images
+        if content.type == "image", let imageData = content.image {
+            let md5 = Self.md5Hash(imageData)
+            let imagePredicate = #Predicate<ClipItem> { $0.contentTypeRaw == "image" && $0.imageMD5 == md5 }
+            let existing = try? context.fetch(FetchDescriptor<ClipItem>(predicate: imagePredicate))
+            if let existingItem = existing?.first {
+                existingItem.timestamp = Date()
+                try? context.save()
+                return
+            }
+
+            // Enforce 200 item cap
+            enforceCap(context: context, maxCount: 200)
+
+            let sourceApp = NSWorkspace.shared.frontmostApplication?.bundleIdentifier
+            let appName = NSWorkspace.shared.frontmostApplication?.localizedName
+            let fileName = content.fileName ?? "\(appName ?? "未知")-\(UUID().uuidString.prefix(4))"
+
+            let item = ClipItem(
+                timestamp: Date(),
+                contentTypeRaw: content.type,
+                imageData: imageData,
+                imageFileName: fileName,
+                imageMD5: md5,
+                sourceAppBundleID: sourceApp
+            )
+            context.insert(item)
+            try? context.save()
+            return
+        }
+
+        // Text/image dedup by content (existing logic)
         if let latest = try? context.fetch(
             FetchDescriptor<ClipItem>(sortBy: [SortDescriptor(\.timestamp, order: .reverse)])
         ).first {
             switch (latest.contentTypeRaw, content.type) {
             case ("text", "text") where latest.textContent == content.text:
-                latest.timestamp = Date()
-                try? context.save()
-                return
-            case ("image", "image") where latest.imageData == content.image:
                 latest.timestamp = Date()
                 try? context.save()
                 return
@@ -64,7 +92,6 @@ final class ClipboardMonitor: ObservableObject {
             timestamp: Date(),
             contentTypeRaw: content.type,
             textContent: content.text,
-            imageData: content.image,
             fileBookmarks: content.fileBookmarks,
             sourceAppBundleID: NSWorkspace.shared.frontmostApplication?.bundleIdentifier
         )
@@ -75,15 +102,17 @@ final class ClipboardMonitor: ObservableObject {
     private func readPasteboard(
         _ pb: NSPasteboard,
         types: [NSPasteboard.PasteboardType]
-    ) -> (type: String, text: String?, image: Data?, fileBookmarks: Data?)? {
+    ) -> (type: String, text: String?, image: Data?, fileBookmarks: Data?, fileName: String?)? {
         // Check image first — some apps put both fileURL and PNG on pasteboard
         if types.contains(.png), let data = pb.data(forType: .png) {
             let image = capImageSize(data, maxBytes: 2_000_000)
-            return ("image", nil, image, nil)
+            let fileName = extractFileName(from: pb, types: types)
+            return ("image", nil, image, nil, fileName)
         }
         if types.contains(.tiff), let data = pb.data(forType: .tiff) {
             let image = capImageSize(data, maxBytes: 2_000_000)
-            return ("image", nil, image, nil)
+            let fileName = extractFileName(from: pb, types: types)
+            return ("image", nil, image, nil, fileName)
         }
         if types.contains(.fileURL),
            let urls = pb.readObjects(forClasses: [NSURL.self], options: nil) as? [URL],
@@ -93,12 +122,28 @@ final class ClipboardMonitor: ObservableObject {
                 includingResourceValuesForKeys: nil,
                 relativeTo: nil
             )
-            return ("file", nil, nil, bookmarks)
+            return ("file", nil, nil, bookmarks, nil)
         }
         if let text = pb.string(forType: .string) {
-            return ("text", text, nil, nil)
+            return ("text", text, nil, nil, nil)
         }
         return nil
+    }
+
+    // MARK: - Helpers
+
+    private func extractFileName(from pb: NSPasteboard, types: [NSPasteboard.PasteboardType]) -> String? {
+        // Try to extract filename if fileURL is also present alongside the image
+        if types.contains(.fileURL),
+           let urls = pb.readObjects(forClasses: [NSURL.self], options: nil) as? [URL],
+           let firstURL = urls.first {
+            return firstURL.lastPathComponent
+        }
+        return nil
+    }
+
+    static func md5Hash(_ data: Data) -> String {
+        CryptoKit.Insecure.MD5.hash(data: data).compactMap { String(format: "%02x", $0) }.joined()
     }
 
     private func capImageSize(_ data: Data, maxBytes: Int) -> Data {
@@ -127,7 +172,6 @@ final class ClipboardMonitor: ObservableObject {
         guard let items = try? context.fetch(allItems),
               items.count >= maxCount else { return }
 
-        // Sort: pinned first, then by paste count descending
         let sorted = items.sorted { a, b in
             if a.isPinned != b.isPinned { return a.isPinned }
             return a.pasteCount > b.pasteCount
