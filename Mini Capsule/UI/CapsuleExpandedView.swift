@@ -4,6 +4,7 @@ import SwiftData
 
 struct CapsuleExpandedView: View {
     @Binding var searchText: String
+    let isDragPrimed: Bool
     var onItemTap: (ClipItem) -> Void
     var onItemDelete: (ClipItem) -> Void
 
@@ -67,9 +68,39 @@ struct CapsuleExpandedView: View {
             .foregroundColor(.secondary)
         }
         .frame(width: 280, height: 360)
-        .background(.ultraThinMaterial)
+        .background {
+            ZStack {
+                // Base material
+                Rectangle()
+                    .fill(.ultraThinMaterial)
+
+                // Drag-primed glow overlay
+                if isDragPrimed {
+                    Rectangle()
+                        .fill(Color.white.opacity(0.1))
+                }
+            }
+        }
         .clipShape(RoundedRectangle(cornerRadius: 18))
-        .shadow(color: .black.opacity(0.2), radius: 12, y: 6)
+        .overlay {
+            if isDragPrimed {
+                RoundedRectangle(cornerRadius: 18)
+                    .stroke(
+                        LinearGradient(
+                            colors: [.white.opacity(0.4), .white.opacity(0.1)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        ),
+                        lineWidth: 1.5
+                    )
+            }
+        }
+        .shadow(
+            color: isDragPrimed ? .white.opacity(0.2) : .black.opacity(0.2),
+            radius: isDragPrimed ? 8 : 12,
+            y: isDragPrimed ? 3 : 6
+        )
+        .animation(.easeInOut(duration: 0.2), value: isDragPrimed)
     }
 
     private var filteredItems: [ClipItem] {
