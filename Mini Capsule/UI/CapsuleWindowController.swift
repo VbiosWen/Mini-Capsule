@@ -101,8 +101,9 @@ final class CapsuleWindowController: NSWindowController, NSWindowDelegate {
 
             window.setFrame(newFrame, display: true, animate: true)
 
-            // When expanded, make key so TextField can receive input
+            // When expanded, activate app and make key so TextField can receive input
             if isExpanded {
+                NSApp.activate(ignoringOtherApps: true)
                 window.makeKey()
             }
         }

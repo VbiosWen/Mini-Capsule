@@ -1,6 +1,7 @@
 // Mini Capsule/UI/CapsuleExpandedView.swift
 import SwiftUI
 import SwiftData
+import AppKit
 
 struct CapsuleExpandedView: View {
     @Binding var searchText: String
@@ -12,6 +13,8 @@ struct CapsuleExpandedView: View {
         sort: [SortDescriptor(\ClipItem.timestamp, order: .reverse)]
     ) private var allItems: [ClipItem]
 
+    @FocusState private var isSearchFocused: Bool
+
     var body: some View {
         VStack(spacing: 0) {
             // Search bar
@@ -22,6 +25,7 @@ struct CapsuleExpandedView: View {
                 TextField("搜索...", text: $searchText)
                     .textFieldStyle(.plain)
                     .font(.system(size: 13))
+                    .focused($isSearchFocused)
 
                 if #available(macOS 14.0, *) {
                     SettingsLink {
@@ -117,6 +121,9 @@ struct CapsuleExpandedView: View {
             y: isDragPrimed ? 3 : 6
         )
         .animation(.easeInOut(duration: 0.2), value: isDragPrimed)
+        .onAppear {
+            isSearchFocused = true
+        }
     }
 
     private var filteredItems: [ClipItem] {
