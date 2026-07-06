@@ -21,6 +21,7 @@ struct CapsuleView: View {
     @State private var isDragging = false
     @State private var dragStartFrame: NSRect?
     @State private var dragWorkItem: DispatchWorkItem?
+    @State private var previousDragTranslation: CGSize?
 
     var body: some View {
         Group {
@@ -94,19 +95,27 @@ struct CapsuleView: View {
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.5, execute: workItem)
                 }
 
-                // Only move window after long-press delay has elapsed
-                guard isDragPrimed else { return }
-
                 guard let panel = NSApp.windows.first(where: { $0 is NSPanel }) else { return }
-                if !isDragging {
-                    isDragging = true
-                    dragStartFrame = panel.frame
+
+                // Capture frame and reset delta tracking before drag actually moves the window
+                if !isDragPrimed {
+                    if dragStartFrame == nil {
+                        dragStartFrame = panel.frame
+                        previousDragTranslation = .zero
+                    }
+                    return
                 }
-                guard let startFrame = dragStartFrame else { return }
-                var newFrame = startFrame
-                newFrame.origin.x += value.translation.width
-                newFrame.origin.y -= value.translation.height
+
+                // Use incremental delta from current window position
+                let prev = previousDragTranslation ?? .zero
+                let deltaX = value.translation.width - prev.width
+                let deltaY = value.translation.height - prev.height
+                var newFrame = panel.frame
+                newFrame.origin.x += deltaX
+                newFrame.origin.y -= deltaY
                 panel.setFrame(newFrame, display: true)
+                previousDragTranslation = value.translation
+                isDragging = true
             }
             .onEnded { _ in
                 dragWorkItem?.cancel()
@@ -126,6 +135,7 @@ struct CapsuleView: View {
                 isDragPrimed = false
                 isDragging = false
                 dragStartFrame = nil
+                previousDragTranslation = nil
             }
     }
 
