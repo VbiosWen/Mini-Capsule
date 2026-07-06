@@ -5,8 +5,6 @@ struct ClipItemRow: View {
     let item: ClipItem
     var onTap: () -> Void
     var onDelete: () -> Void
-    let isPreviewing: Bool
-    var onTogglePreview: (() -> Void)?
 
     @State private var isHovering = false
 
@@ -45,14 +43,11 @@ struct ClipItemRow: View {
             isHovering = hovering
         }
         .onTapGesture {
-            if item.contentTypeRaw == "image" {
-                onTogglePreview?()
-            } else {
-                onTap()
-            }
+            onTap()
         }
         .overlay {
-            if isPreviewing, let imageData = item.imageData, let nsImage = NSImage(data: imageData) {
+            if isHovering, item.contentTypeRaw == "image",
+               let imageData = item.imageData, let nsImage = NSImage(data: imageData) {
                 HStack {
                     Spacer()
                     imagePreview(nsImage)

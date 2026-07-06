@@ -12,8 +12,6 @@ struct CapsuleExpandedView: View {
         sort: [SortDescriptor(\ClipItem.timestamp, order: .reverse)]
     ) private var allItems: [ClipItem]
 
-    @State private var previewingItemID: UUID?
-
     var body: some View {
         VStack(spacing: 0) {
             // Search bar
@@ -24,9 +22,6 @@ struct CapsuleExpandedView: View {
                 TextField("搜索...", text: $searchText)
                     .textFieldStyle(.plain)
                     .font(.system(size: 13))
-                    .onChange(of: searchText) { _, _ in
-                        previewingItemID = nil
-                    }
 
                 Button(action: {}) {
                     Image(systemName: "gear")
@@ -46,30 +41,13 @@ struct CapsuleExpandedView: View {
                     ForEach(filteredItems) { item in
                         ClipItemRow(
                             item: item,
-                            onTap: {
-                                previewingItemID = nil
-                                onItemTap(item)
-                            },
-                            onDelete: {
-                                previewingItemID = nil
-                                onItemDelete(item)
-                            },
-                            isPreviewing: item.id == previewingItemID,
-                            onTogglePreview: {
-                                previewingItemID = (previewingItemID == item.id) ? nil : item.id
-                            }
+                            onTap: { onItemTap(item) },
+                            onDelete: { onItemDelete(item) }
                         )
 
                         Divider()
                             .padding(.leading, 12)
                     }
-                }
-                .background {
-                    Color.clear
-                        .contentShape(Rectangle())
-                        .onTapGesture {
-                            previewingItemID = nil
-                        }
                 }
             }
 
