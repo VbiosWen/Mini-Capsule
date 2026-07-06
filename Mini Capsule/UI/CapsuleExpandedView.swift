@@ -54,14 +54,22 @@ struct CapsuleExpandedView: View {
                                 previewingItemID = nil
                                 onItemDelete(item)
                             },
-                            onPreviewStateChanged: { isShowing in
-                                previewingItemID = isShowing ? item.id : nil
+                            isPreviewing: item.id == previewingItemID,
+                            onTogglePreview: {
+                                previewingItemID = (previewingItemID == item.id) ? nil : item.id
                             }
                         )
 
                         Divider()
                             .padding(.leading, 12)
                     }
+                }
+                .background {
+                    Color.clear
+                        .contentShape(Rectangle())
+                        .onTapGesture {
+                            previewingItemID = nil
+                        }
                 }
             }
 

@@ -45,8 +45,6 @@ final class CapsuleWindowController: NSWindowController, NSWindowDelegate {
 
         panel.contentView = NSHostingView(rootView: capsuleView)
         panel.contentView?.wantsLayer = true
-        panel.contentView?.layer?.cornerRadius = 18
-        panel.contentView?.layer?.masksToBounds = true
 
         observeExpandedState()
     }
@@ -108,11 +106,14 @@ final class CapsuleWindowController: NSWindowController, NSWindowDelegate {
         var x = (screenWidth - collapsedSize.width) / 2
         var y = screenHeight - collapsedSize.height - 40
 
-        // Restore saved position only — always use collapsed size on launch
+        // Restore saved position, clamping to visible screen bounds
         if let dict = UserDefaults.standard.dictionary(forKey: frameKey) as? [String: CGFloat],
            let savedX = dict["x"], let savedY = dict["y"] {
-            x = savedX
-            y = savedY
+            let screenFrame = screen.visibleFrame
+            let clampedX = min(max(savedX, screenFrame.minX), screenFrame.maxX - collapsedSize.width)
+            let clampedY = min(max(savedY, screenFrame.minY), screenFrame.maxY - collapsedSize.height)
+            x = clampedX
+            y = clampedY
         }
 
         return NSRect(x: x, y: y, width: collapsedSize.width, height: collapsedSize.height)

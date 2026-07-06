@@ -5,10 +5,10 @@ struct ClipItemRow: View {
     let item: ClipItem
     var onTap: () -> Void
     var onDelete: () -> Void
-    var onPreviewStateChanged: ((Bool) -> Void)?
+    let isPreviewing: Bool
+    var onTogglePreview: (() -> Void)?
 
     @State private var isHovering = false
-    @State private var showImagePreview = false
 
     var body: some View {
         HStack(spacing: 10) {
@@ -46,14 +46,13 @@ struct ClipItemRow: View {
         }
         .onTapGesture {
             if item.contentTypeRaw == "image" {
-                showImagePreview.toggle()
-                onPreviewStateChanged?(showImagePreview)
+                onTogglePreview?()
             } else {
                 onTap()
             }
         }
         .overlay {
-            if showImagePreview, let imageData = item.imageData, let nsImage = NSImage(data: imageData) {
+            if isPreviewing, let imageData = item.imageData, let nsImage = NSImage(data: imageData) {
                 HStack {
                     Spacer()
                     imagePreview(nsImage)
