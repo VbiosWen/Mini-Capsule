@@ -24,6 +24,7 @@ class CapsuleAppDelegate: NSObject, NSApplicationDelegate {
     private var capsuleWindowController: CapsuleWindowController?
     private var clipboardMonitor: ClipboardMonitor?
     private var shortcutMonitor: Any?
+    private var menuBarService: MenuBarService?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         // Hide from Dock and make the app a background accessory
@@ -44,6 +45,24 @@ class CapsuleAppDelegate: NSObject, NSApplicationDelegate {
         let monitor = ClipboardMonitor()
         monitor.start(context: Self.sharedModelContainer.mainContext)
         clipboardMonitor = monitor
+
+        // Start menu bar
+        let menuBar = MenuBarService()
+        menuBar.start(context: Self.sharedModelContainer.mainContext)
+        menuBarService = menuBar
+
+        NotificationCenter.default.addObserver(
+            forName: .showFloatingPanelChanged,
+            object: nil,
+            queue: .main
+        ) { [weak self] notification in
+            guard let show = notification.userInfo?["show"] as? Bool else { return }
+            if show {
+                self?.capsuleWindowController?.showWindow()
+            } else {
+                self?.capsuleWindowController?.window?.orderOut(nil)
+            }
+        }
 
         registerShortcuts()
     }
@@ -108,6 +127,7 @@ class CapsuleAppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationWillTerminate(_ notification: Notification) {
         clipboardMonitor?.stop()
+        menuBarService?.stop()
     }
 }
 #endif
@@ -144,6 +164,10 @@ struct Mini_CapsuleApp: App {
 
         Settings {
             TabView {
+                GeneralSettingsView()
+                    .tabItem { Label("通用", systemImage: "gear") }
+                AppearanceSettingsView()
+                    .tabItem { Label("外观", systemImage: "paintpalette") }
                 ClipboardSettingsView()
                     .tabItem { Label("剪贴板", systemImage: "doc.on.clipboard") }
                 ShortcutsSettingsView()
