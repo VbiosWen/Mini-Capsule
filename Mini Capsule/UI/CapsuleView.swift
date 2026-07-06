@@ -1,6 +1,7 @@
 // Mini Capsule/UI/CapsuleView.swift
 import SwiftUI
 import SwiftData
+import AppKit
 
 extension NSNotification.Name {
     static let capsuleDidChangeExpanded = NSNotification.Name("capsuleDidChangeExpanded")
@@ -14,6 +15,7 @@ struct CapsuleView: View {
     @State private var isCapturing = false
     @State private var searchText = ""
     @State private var hoverWorkItem: DispatchWorkItem?
+    @State private var dragStartFrame: NSRect?
 
     var body: some View {
         Group {
@@ -40,6 +42,7 @@ struct CapsuleView: View {
                 )
             }
         }
+        .simultaneousGesture(windowDragGesture)
         .onHover { hovering in
             hoverWorkItem?.cancel()
 
@@ -71,6 +74,32 @@ struct CapsuleView: View {
                 isCapturing = false
             }
         }
+    }
+
+    private var windowDragGesture: some Gesture {
+        DragGesture(minimumDistance: 3)
+            .onChanged { value in
+                guard let panel = NSApp.windows.first(where: { $0 is NSPanel }) else { return }
+                if dragStartFrame == nil {
+                    dragStartFrame = panel.frame
+                }
+                guard let startFrame = dragStartFrame else { return }
+                var newFrame = startFrame
+                newFrame.origin.x += value.translation.width
+                newFrame.origin.y -= value.translation.height
+                panel.setFrame(newFrame, display: true)
+            }
+            .onEnded { _ in
+                dragStartFrame = nil
+                if let panel = NSApp.windows.first(where: { $0 is NSPanel }) {
+                    UserDefaults.standard.set([
+                        "x": panel.frame.origin.x,
+                        "y": panel.frame.origin.y,
+                        "w": panel.frame.size.width,
+                        "h": panel.frame.size.height
+                    ], forKey: "CapsuleWindowFrame")
+                }
+            }
     }
 
     private func postExpandedNotification() {
