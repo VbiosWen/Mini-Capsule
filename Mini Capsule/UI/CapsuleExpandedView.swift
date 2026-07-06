@@ -6,6 +6,7 @@ import AppKit
 struct CapsuleExpandedView: View {
     @Binding var searchText: String
     let isDragPrimed: Bool
+    let isExpandedReady: Bool
     var onItemTap: (ClipItem) -> Void
     var onItemDelete: (ClipItem) -> Void
 
@@ -14,6 +15,7 @@ struct CapsuleExpandedView: View {
     ) private var allItems: [ClipItem]
 
     @FocusState private var isSearchFocused: Bool
+    @State private var selectedItemID: UUID?
 
     var body: some View {
         VStack(spacing: 0) {
@@ -56,6 +58,8 @@ struct CapsuleExpandedView: View {
                     ForEach(filteredItems) { item in
                         ClipItemRow(
                             item: item,
+                            isSelected: item.id == selectedItemID,
+                            isInteractive: isExpandedReady,
                             onTap: { onItemTap(item) },
                             onDelete: { onItemDelete(item) }
                         )
@@ -124,6 +128,20 @@ struct CapsuleExpandedView: View {
         .onAppear {
             isSearchFocused = true
         }
+        .onChange(of: searchText) { _, _ in
+            // Reset selection to first item when filter changes
+            selectedItemID = filteredItems.first?.id
+        }
+        .onDisappear {
+            selectedItemID = nil
+        }
+        .background(KeyboardMonitorView(
+            filteredItems: filteredItems,
+            selectedItemID: $selectedItemID,
+            onSelect: { item in
+                onItemTap(item)
+            }
+        ))
     }
 
     private var filteredItems: [ClipItem] {
@@ -137,5 +155,87 @@ struct CapsuleExpandedView: View {
 
     private var pinnedCount: Int {
         allItems.filter(\.isPinned).count
+    }
+}
+
+// MARK: - Keyboard Monitor (NSViewRepresentable)
+
+fileprivate struct KeyboardMonitorView: NSViewRepresentable {
+    let filteredItems: [ClipItem]
+    @Binding var selectedItemID: UUID?
+    let onSelect: (ClipItem) -> Void
+
+    func makeNSView(context: Context) -> NSView {
+        let view = MonitorView()
+        view.monitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
+            // Return nil (consume) for handled keys; return event (pass through) for others
+            return context.coordinator.handleKeyEvent(event) ? nil : event
+        }
+        context.coordinator.owner = view
+        return view
+    }
+
+    func updateNSView(_ nsView: NSView, context: Context) {
+        context.coordinator.filteredItems = filteredItems
+        context.coordinator.onSelect = onSelect
+    }
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(filteredItems: filteredItems, selectedItemID: $selectedItemID, onSelect: onSelect)
+    }
+
+    final class Coordinator {
+        var filteredItems: [ClipItem]
+        var selectedItemID: Binding<UUID?>
+        var onSelect: (ClipItem) -> Void
+        weak var owner: MonitorView?
+
+        init(filteredItems: [ClipItem], selectedItemID: Binding<UUID?>, onSelect: @escaping (ClipItem) -> Void) {
+            self.filteredItems = filteredItems
+            self.selectedItemID = selectedItemID
+            self.onSelect = onSelect
+        }
+
+        func handleKeyEvent(_ event: NSEvent) -> Bool {
+            guard !filteredItems.isEmpty else { return false }
+            let currentIndex: Int
+            if let id = selectedItemID.wrappedValue,
+               let idx = filteredItems.firstIndex(where: { $0.id == id }) {
+                currentIndex = idx
+            } else {
+                // No selection yet — start at -1 so first ↓ selects index 0
+                currentIndex = -1
+            }
+
+            switch event.keyCode {
+            case 125: // ↓ (down arrow)
+                let next = min(currentIndex + 1, filteredItems.count - 1)
+                selectedItemID.wrappedValue = filteredItems[next].id
+                return true
+            case 126: // ↑ (up arrow)
+                let prev = max(currentIndex - 1, 0)
+                selectedItemID.wrappedValue = filteredItems[prev].id
+                return true
+            case 36, 76: // Enter (36 = Return, 76 = numpad Enter)
+                if let id = selectedItemID.wrappedValue,
+                   let item = filteredItems.first(where: { $0.id == id }) {
+                    onSelect(item)
+                }
+                return true
+            default:
+                // Pass through: character input reaches search field
+                return false
+            }
+        }
+    }
+
+    final class MonitorView: NSView {
+        var monitor: Any?
+
+        deinit {
+            if let m = monitor {
+                NSEvent.removeMonitor(m)
+            }
+        }
     }
 }
