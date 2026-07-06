@@ -10,13 +10,55 @@ final class ClipboardMonitor: ObservableObject {
     private var lastChangeCount: Int = NSPasteboard.general.changeCount
     private var context: ModelContext?
 
+    private var currentPollingInterval: TimeInterval {
+        let interval = UserDefaults.standard.double(forKey: "pollingInterval")
+        return interval > 0 ? interval : 0.5
+    }
+
+    private var maxImageBytes: Int {
+        let mb = UserDefaults.standard.integer(forKey: "imageMaxSizeMB")
+        switch mb {
+        case 1: return 1_000_000
+        case 5: return 5_000_000
+        case 0: return Int.max  // unlimited
+        default: return 2_000_000
+        }
+    }
+
+    private var maxHistoryCount: Int {
+        let count = UserDefaults.standard.integer(forKey: "historyMaxCount")
+        return count >= 50 ? count : 200
+    }
+
+    private var isDedupEnabled: Bool {
+        // Default true if key not set
+        if UserDefaults.standard.object(forKey: "dedupEnabled") == nil { return true }
+        return UserDefaults.standard.bool(forKey: "dedupEnabled")
+    }
+
     func start(context: ModelContext) {
         self.context = context
         lastChangeCount = NSPasteboard.general.changeCount
-        timer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { [weak self] _ in
+        restartTimer()
+        observeSettings()
+    }
+
+    private func restartTimer() {
+        timer?.invalidate()
+        timer = Timer.scheduledTimer(withTimeInterval: currentPollingInterval, repeats: true) { [weak self] _ in
             Task { [weak self] in
                 self?.checkPasteboard()
             }
+        }
+    }
+
+    private func observeSettings() {
+        NotificationCenter.default.addObserver(
+            forName: .pollingIntervalDidChange,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            self?.restartTimer()
         }
     }
 
@@ -42,51 +84,72 @@ final class ClipboardMonitor: ObservableObject {
 
         // MD5-based dedup for images
         if content.type == "image", let imageData = content.image {
-            let md5 = Self.md5Hash(imageData)
-            let imagePredicate = #Predicate<ClipItem> { $0.contentTypeRaw == "image" && $0.imageMD5 == md5 }
-            let existing = try? context.fetch(FetchDescriptor<ClipItem>(predicate: imagePredicate))
-            if let existingItem = existing?.first {
-                existingItem.timestamp = Date()
+            if isDedupEnabled {
+                let md5 = Self.md5Hash(imageData)
+                let imagePredicate = #Predicate<ClipItem> { $0.contentTypeRaw == "image" && $0.imageMD5 == md5 }
+                let existing = try? context.fetch(FetchDescriptor<ClipItem>(predicate: imagePredicate))
+                if let existingItem = existing?.first {
+                    existingItem.timestamp = Date()
+                    try? context.save()
+                    return
+                }
+
+                // Enforce max count cap
+                enforceCap(context: context, maxCount: maxHistoryCount)
+
+                let sourceApp = NSWorkspace.shared.frontmostApplication?.bundleIdentifier
+                let appName = NSWorkspace.shared.frontmostApplication?.localizedName
+                let fileName = content.fileName ?? "\(appName ?? "未知")-\(UUID().uuidString.prefix(4))"
+
+                let item = ClipItem(
+                    timestamp: Date(),
+                    contentTypeRaw: content.type,
+                    imageData: imageData,
+                    imageFileName: fileName,
+                    imageMD5: md5,
+                    sourceAppBundleID: sourceApp
+                )
+                context.insert(item)
+                try? context.save()
+                return
+            } else {
+                // No dedup — always insert
+                enforceCap(context: context, maxCount: maxHistoryCount)
+                let sourceApp = NSWorkspace.shared.frontmostApplication?.bundleIdentifier
+                let appName = NSWorkspace.shared.frontmostApplication?.localizedName
+                let fileName = content.fileName ?? "\(appName ?? "未知")-\(UUID().uuidString.prefix(4))"
+                let item = ClipItem(
+                    timestamp: Date(),
+                    contentTypeRaw: content.type,
+                    imageData: imageData,
+                    imageFileName: fileName,
+                    imageMD5: Self.md5Hash(imageData),
+                    sourceAppBundleID: sourceApp
+                )
+                context.insert(item)
                 try? context.save()
                 return
             }
-
-            // Enforce 200 item cap
-            enforceCap(context: context, maxCount: 200)
-
-            let sourceApp = NSWorkspace.shared.frontmostApplication?.bundleIdentifier
-            let appName = NSWorkspace.shared.frontmostApplication?.localizedName
-            let fileName = content.fileName ?? "\(appName ?? "未知")-\(UUID().uuidString.prefix(4))"
-
-            let item = ClipItem(
-                timestamp: Date(),
-                contentTypeRaw: content.type,
-                imageData: imageData,
-                imageFileName: fileName,
-                imageMD5: md5,
-                sourceAppBundleID: sourceApp
-            )
-            context.insert(item)
-            try? context.save()
-            return
         }
 
         // Text/image dedup by content (existing logic)
-        if let latest = try? context.fetch(
-            FetchDescriptor<ClipItem>(sortBy: [SortDescriptor(\.timestamp, order: .reverse)])
-        ).first {
-            switch (latest.contentTypeRaw, content.type) {
-            case ("text", "text") where latest.textContent == content.text:
-                latest.timestamp = Date()
-                try? context.save()
-                return
-            default:
-                break
+        if isDedupEnabled {
+            if let latest = try? context.fetch(
+                FetchDescriptor<ClipItem>(sortBy: [SortDescriptor(\.timestamp, order: .reverse)])
+            ).first {
+                switch (latest.contentTypeRaw, content.type) {
+                case ("text", "text") where latest.textContent == content.text:
+                    latest.timestamp = Date()
+                    try? context.save()
+                    return
+                default:
+                    break
+                }
             }
         }
 
-        // Enforce 200 item cap
-        enforceCap(context: context, maxCount: 200)
+        // Enforce max count cap
+        enforceCap(context: context, maxCount: maxHistoryCount)
 
         let item = ClipItem(
             timestamp: Date(),
@@ -105,12 +168,12 @@ final class ClipboardMonitor: ObservableObject {
     ) -> (type: String, text: String?, image: Data?, fileBookmarks: Data?, fileName: String?)? {
         // Check image first — some apps put both fileURL and PNG on pasteboard
         if types.contains(.png), let data = pb.data(forType: .png) {
-            let image = capImageSize(data, maxBytes: 2_000_000)
+            let image = capImageSize(data, maxBytes: maxImageBytes)
             let fileName = extractFileName(from: pb, types: types)
             return ("image", nil, image, nil, fileName)
         }
         if types.contains(.tiff), let data = pb.data(forType: .tiff) {
-            let image = capImageSize(data, maxBytes: 2_000_000)
+            let image = capImageSize(data, maxBytes: maxImageBytes)
             let fileName = extractFileName(from: pb, types: types)
             return ("image", nil, image, nil, fileName)
         }
