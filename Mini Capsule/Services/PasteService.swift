@@ -2,12 +2,20 @@
 import AppKit
 import SwiftData
 import CoreGraphics
+import ApplicationServices
 
 @MainActor
 final class PasteService {
     static var isSelfPaste = false
 
     static func paste(_ item: ClipItem, context: ModelContext) {
+        // Check accessibility permissions before attempting CGEvent simulation
+        let options: NSDictionary = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: false]
+        guard AXIsProcessTrustedWithOptions(options) else {
+            // Accessibility permissions not granted — paste will fail silently
+            return
+        }
+
         let pasteboard = NSPasteboard.general
         pasteboard.clearContents()
 
@@ -40,6 +48,9 @@ final class PasteService {
         // Simulate Cmd+V via CGEvent
         let source = CGEventSource(stateID: .combinedSessionState)
 
+        // Note: CGEventSource.keyCode(forKeyboardType:source:character:) is not available
+        // in this SDK version. The hardcoded key code 0x09 (V) is QWERTY-specific.
+        // For non-QWERTY layouts, a keyboard layout lookup would be needed.
         let cmdKey: CGKeyCode = 0x37
         let vKey: CGKeyCode = 0x09
 
@@ -54,14 +65,11 @@ final class PasteService {
         vUp?.flags = CGEventFlags(rawValue: cmdFlag)
         cmdUp?.flags = CGEventFlags(rawValue: 0)
 
-        // Post events with small delays
-        cmdDown?.post(tap: .cghidEventTap)
-        usleep(10_000)
-        vDown?.post(tap: .cghidEventTap)
-        usleep(10_000)
-        vUp?.post(tap: .cghidEventTap)
-        usleep(10_000)
-        cmdUp?.post(tap: .cghidEventTap)
+        // Post events
+        cmdDown?.post(tap: CGEventTapLocation.cghidEventTap)
+        vDown?.post(tap: CGEventTapLocation.cghidEventTap)
+        vUp?.post(tap: CGEventTapLocation.cghidEventTap)
+        cmdUp?.post(tap: CGEventTapLocation.cghidEventTap)
 
         // Update paste stats
         item.pasteCount += 1
