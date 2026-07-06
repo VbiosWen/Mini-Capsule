@@ -68,7 +68,7 @@ final class PasteService {
                     pasteboard.writeObjects([url as NSURL])
                 }
             }
-        default:
+        default: 
             break
         }
 

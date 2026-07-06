@@ -45,9 +45,11 @@ struct ClipItemRow: View {
         .onTapGesture {
             onTap()
         }
-        .popover(isPresented: $isHovering, arrowEdge: .trailing) {
-            if item.contentTypeRaw == "image",
-               let imageData = item.imageData, let nsImage = NSImage(data: imageData) {
+        .popover(isPresented: Binding(
+            get: { isHovering && item.contentTypeRaw == "image" },
+            set: { isHovering = $0 }
+        ), arrowEdge: .trailing) {
+            if let imageData = item.imageData, let nsImage = NSImage(data: imageData) {
                 imagePreview(nsImage)
                     .padding(8)
             }
