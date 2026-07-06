@@ -99,22 +99,22 @@ final class CapsuleWindowController: NSWindowController, NSWindowDelegate {
     }
 
     private static func loadFrame() -> NSRect {
-        guard let dict = UserDefaults.standard.dictionary(forKey: frameKey) as? [String: CGFloat],
-              let x = dict["x"],
-              let y = dict["y"] else {
-            // Default: top-center of main screen
-            guard let screen = NSScreen.main else {
-                return NSRect(x: 0, y: 0, width: collapsedSize.width, height: collapsedSize.height)
-            }
-            let screenWidth = screen.visibleFrame.width
-            let screenHeight = screen.visibleFrame.maxY
-            return NSRect(
-                x: (screenWidth - collapsedSize.width) / 2,
-                y: screenHeight - collapsedSize.height - 40,
-                width: collapsedSize.width,
-                height: collapsedSize.height
-            )
+        guard let screen = NSScreen.main else {
+            return NSRect(x: 0, y: 0, width: collapsedSize.width, height: collapsedSize.height)
         }
-        return NSRect(x: x, y: y, width: dict["w"] ?? collapsedSize.width, height: dict["h"] ?? collapsedSize.height)
+        let screenWidth = screen.visibleFrame.width
+        let screenHeight = screen.visibleFrame.maxY
+
+        var x = (screenWidth - collapsedSize.width) / 2
+        var y = screenHeight - collapsedSize.height - 40
+
+        // Restore saved position only — always use collapsed size on launch
+        if let dict = UserDefaults.standard.dictionary(forKey: frameKey) as? [String: CGFloat],
+           let savedX = dict["x"], let savedY = dict["y"] {
+            x = savedX
+            y = savedY
+        }
+
+        return NSRect(x: x, y: y, width: collapsedSize.width, height: collapsedSize.height)
     }
 }

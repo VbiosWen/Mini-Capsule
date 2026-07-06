@@ -23,6 +23,16 @@ class CapsuleAppDelegate: NSObject, NSApplicationDelegate {
     private var clipboardMonitor: ClipboardMonitor?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        // Hide from Dock and make the app a background accessory
+        NSApp.setActivationPolicy(.accessory)
+
+        // Close any auto-created SwiftUI windows
+        DispatchQueue.main.async {
+            for window in NSApp.windows {
+                window.close()
+            }
+        }
+
         // Frequency cleanup on startup
         FrequencyCleanupService.performCleanup(
             context: Self.sharedModelContainer.mainContext,
