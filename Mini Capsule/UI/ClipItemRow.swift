@@ -3,6 +3,8 @@ import SwiftUI
 
 struct ClipItemRow: View {
     let item: ClipItem
+    let isSelected: Bool
+    let isInteractive: Bool
     var onTap: () -> Void
     var onDelete: () -> Void
 
@@ -27,7 +29,7 @@ struct ClipItemRow: View {
 
             Spacer()
 
-            if isHovering {
+            if isHovering && isInteractive {
                 Button(action: onDelete) {
                     Image(systemName: "xmark.circle.fill")
                         .foregroundColor(.secondary)
@@ -38,21 +40,41 @@ struct ClipItemRow: View {
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 6)
+        .background(selectionBackground)
         .contentShape(Rectangle())
         .onHover { hovering in
+            guard isInteractive else { return }
             isHovering = hovering
         }
         .onTapGesture {
+            guard isInteractive else { return }
             onTap()
         }
         .popover(isPresented: Binding(
-            get: { isHovering && item.contentTypeRaw == "image" },
+            get: { isHovering && (item.contentTypeRaw == "image" || item.contentTypeRaw == "text") },
             set: { isHovering = $0 }
         ), arrowEdge: .trailing) {
-            if let imageData = item.imageData, let nsImage = NSImage(data: imageData) {
+            if item.contentTypeRaw == "image",
+               let imageData = item.imageData,
+               let nsImage = NSImage(data: imageData) {
                 imagePreview(nsImage)
                     .padding(8)
+            } else if item.contentTypeRaw == "text",
+                      let text = item.textContent {
+                textPreview(text)
+                    .padding(8)
             }
+        }
+    }
+
+    // MARK: - Selection
+
+    @ViewBuilder
+    private var selectionBackground: some View {
+        if isSelected {
+            RoundedRectangle(cornerRadius: 6)
+                .fill(Color.accentColor.opacity(0.15))
+                .padding(.horizontal, 4)
         }
     }
 
@@ -77,6 +99,22 @@ struct ClipItemRow: View {
             .background(.ultraThinMaterial)
             .clipShape(RoundedRectangle(cornerRadius: 12))
             .shadow(color: .black.opacity(0.15), radius: 8, y: 4)
+    }
+
+    // MARK: - Text Preview
+
+    @ViewBuilder
+    private func textPreview(_ text: String) -> some View {
+        ScrollView {
+            Text(text)
+                .font(.system(size: 12, design: .monospaced))
+                .textSelection(.enabled)
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .frame(maxWidth: 300, maxHeight: 200)
+        .background(.ultraThinMaterial)
+        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .shadow(color: .black.opacity(0.15), radius: 8, y: 4)
     }
 
     // MARK: - Type Icon / Thumbnail
