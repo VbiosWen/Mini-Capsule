@@ -15,13 +15,19 @@ struct CapsuleView: View {
     @State private var isCapturing = false
     @State private var searchText = ""
     @State private var hoverWorkItem: DispatchWorkItem?
+
+    // Long-press drag state
+    @State private var isDragPrimed = false
+    @State private var isDragging = false
     @State private var dragStartFrame: NSRect?
+    @State private var dragWorkItem: DispatchWorkItem?
 
     var body: some View {
         Group {
             if isExpanded {
                 CapsuleExpandedView(
                     searchText: $searchText,
+                    isDragPrimed: isDragPrimed,
                     onItemTap: { item in
                         PasteService.copyToClipboard(item)
                         item.pasteCount += 1
@@ -38,7 +44,8 @@ struct CapsuleView: View {
             } else {
                 CapsuleCollapsedView(
                     latestItem: items.first,
-                    isCapturing: isCapturing
+                    isCapturing: isCapturing,
+                    isDragPrimed: isDragPrimed
                 )
             }
         }
@@ -67,7 +74,6 @@ struct CapsuleView: View {
                 DispatchQueue.main.asyncAfter(deadline: .now() + 1.0, execute: workItem)
             }
         }
-        // Flash animation when new item captured
         .onChange(of: items.first?.id) { _, _ in
             isCapturing = true
             DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
@@ -77,10 +83,23 @@ struct CapsuleView: View {
     }
 
     private var windowDragGesture: some Gesture {
-        DragGesture(minimumDistance: 3)
+        DragGesture(minimumDistance: 0)
             .onChanged { value in
+                // Start 0.5s delay on first drag event
+                if dragWorkItem == nil && !isDragPrimed && !isDragging {
+                    let workItem = DispatchWorkItem {
+                        isDragPrimed = true
+                    }
+                    dragWorkItem = workItem
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5, execute: workItem)
+                }
+
+                // Only move window after long-press delay has elapsed
+                guard isDragPrimed else { return }
+
                 guard let panel = NSApp.windows.first(where: { $0 is NSPanel }) else { return }
-                if dragStartFrame == nil {
+                if !isDragging {
+                    isDragging = true
                     dragStartFrame = panel.frame
                 }
                 guard let startFrame = dragStartFrame else { return }
@@ -90,20 +109,27 @@ struct CapsuleView: View {
                 panel.setFrame(newFrame, display: true)
             }
             .onEnded { _ in
-                dragStartFrame = nil
-                if let panel = NSApp.windows.first(where: { $0 is NSPanel }) {
-                    UserDefaults.standard.set([
-                        "x": panel.frame.origin.x,
-                        "y": panel.frame.origin.y,
-                        "w": panel.frame.size.width,
-                        "h": panel.frame.size.height
-                    ], forKey: "CapsuleWindowFrame")
+                dragWorkItem?.cancel()
+                dragWorkItem = nil
+
+                if isDragging {
+                    if let panel = NSApp.windows.first(where: { $0 is NSPanel }) {
+                        UserDefaults.standard.set([
+                            "x": panel.frame.origin.x,
+                            "y": panel.frame.origin.y,
+                            "w": panel.frame.size.width,
+                            "h": panel.frame.size.height
+                        ], forKey: "CapsuleWindowFrame")
+                    }
                 }
+
+                isDragPrimed = false
+                isDragging = false
+                dragStartFrame = nil
             }
     }
 
     private func postExpandedNotification() {
-        // Short delay to let animation start, then notify window to resize
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
             NotificationCenter.default.post(
                 name: .capsuleDidChangeExpanded,
