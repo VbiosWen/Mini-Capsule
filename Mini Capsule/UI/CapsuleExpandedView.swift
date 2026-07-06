@@ -23,7 +23,13 @@ struct CapsuleExpandedView: View {
                     .textFieldStyle(.plain)
                     .font(.system(size: 13))
 
-                Button(action: {}) {
+                Button(action: {
+                    if #available(macOS 14.0, *) {
+                        NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
+                    } else {
+                        NSApp.sendAction(Selector(("showPreferencesWindow:")), to: nil, from: nil)
+                    }
+                }) {
                     Image(systemName: "gear")
                         .foregroundColor(.secondary)
                         .font(.system(size: 13))
