@@ -6,14 +6,20 @@ import Foundation
 @MainActor
 struct SettingsStoreTests {
 
+    private static let allKeys = [
+        "historyMaxCount", "imageMaxSizeMB", "pollingInterval", "cleanupOnStartup", "dedupEnabled",
+        "showHideShortcut", "quickPasteShortcut", "togglePinShortcut", "iCloudSyncEnabled",
+        "launchAtLogin", "showInMenuBar", "showFloatingPanel", "collapsedStyle",
+        "hoverExpandDelay", "hoverCollapseDelay",
+        "panelOpacityUnfocused", "backgroundImageData", "dotColorMode", "dotCustomColor"
+    ]
+
     @Test func defaults() async throws {
-        // Reset UserDefaults for this suite
+        // Reset all UserDefaults keys for clean state
         let defaults = UserDefaults.standard
-        defaults.removeObject(forKey: "historyMaxCount")
-        defaults.removeObject(forKey: "imageMaxSizeMB")
-        defaults.removeObject(forKey: "pollingInterval")
-        defaults.removeObject(forKey: "cleanupOnStartup")
-        defaults.removeObject(forKey: "dedupEnabled")
+        for key in Self.allKeys {
+            defaults.removeObject(forKey: key)
+        }
 
         // Given: a fresh store
         let store = SettingsStore()
@@ -28,6 +34,15 @@ struct SettingsStoreTests {
         #expect(store.quickPasteShortcut == "cmd+shift+C")
         #expect(store.togglePinShortcut == "")
         #expect(store.iCloudSyncEnabled == false)
+        #expect(store.launchAtLogin == false)
+        #expect(store.showInMenuBar == true)
+        #expect(store.showFloatingPanel == true)
+        #expect(store.collapsedStyle == "capsule")
+        #expect(store.hoverExpandDelay == 0.3)
+        #expect(store.hoverCollapseDelay == 1.0)
+        #expect(store.panelOpacityUnfocused == 0.6)
+        #expect(store.dotColorMode == "auto")
+        #expect(store.dotCustomColor == "#007AFF")
     }
 
     @Test func resetAllRestoresDefaults() async throws {
@@ -43,6 +58,15 @@ struct SettingsStoreTests {
         store.quickPasteShortcut = ""
         store.togglePinShortcut = "cmd+shift+P"
         store.iCloudSyncEnabled = true
+        store.launchAtLogin = true
+        store.showInMenuBar = false
+        store.showFloatingPanel = false
+        store.collapsedStyle = "dot"
+        store.hoverExpandDelay = 1.0
+        store.hoverCollapseDelay = 3.0
+        store.panelOpacityUnfocused = 0.3
+        store.dotColorMode = "custom"
+        store.dotCustomColor = "#FF0000"
 
         // When: reset
         store.resetAll()
@@ -57,6 +81,15 @@ struct SettingsStoreTests {
         #expect(store.quickPasteShortcut == "cmd+shift+C")
         #expect(store.togglePinShortcut == "")
         #expect(store.iCloudSyncEnabled == false)
+        #expect(store.launchAtLogin == false)
+        #expect(store.showInMenuBar == true)
+        #expect(store.showFloatingPanel == true)
+        #expect(store.collapsedStyle == "capsule")
+        #expect(store.hoverExpandDelay == 0.3)
+        #expect(store.hoverCollapseDelay == 1.0)
+        #expect(store.panelOpacityUnfocused == 0.6)
+        #expect(store.dotColorMode == "auto")
+        #expect(store.dotCustomColor == "#007AFF")
     }
 
     @Test func settingsPersistAcrossStoreInstances() async throws {
@@ -81,5 +114,8 @@ struct SettingsStoreTests {
 
         store.togglePinShortcut = ""
         #expect(store.togglePinShortcut.isEmpty == true)
+
+        // Cleanup
+        store.resetAll()
     }
 }
