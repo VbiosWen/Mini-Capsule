@@ -43,7 +43,6 @@ struct ClipItemRow: View {
         .background(selectionBackground)
         .contentShape(Rectangle())
         .onHover { hovering in
-            guard isInteractive else { return }
             isHovering = hovering
         }
         .onTapGesture {
@@ -51,7 +50,7 @@ struct ClipItemRow: View {
             onTap()
         }
         .popover(isPresented: Binding(
-            get: { isHovering && (item.contentTypeRaw == "image" || item.contentTypeRaw == "text") },
+            get: { isHovering && isInteractive && (item.contentTypeRaw == "image" || item.contentTypeRaw == "text") },
             set: { isHovering = $0 }
         ), arrowEdge: .trailing) {
             if item.contentTypeRaw == "image",
