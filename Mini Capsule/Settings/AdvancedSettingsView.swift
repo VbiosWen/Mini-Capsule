@@ -80,9 +80,9 @@ struct AdvancedSettingsView: View {
 
     private func exportData() {
         isOperating = true
-        defer { isOperating = false }
 
         guard let data = settings.exportData(context: modelContext) else {
+            isOperating = false
             alertTitle = "导出失败"
             alertMessage = "无法读取剪贴板数据。"
             showAlert = true
@@ -104,6 +104,7 @@ struct AdvancedSettingsView: View {
                     showAlert = true
                 }
             }
+            isOperating = false
         }
     }
 
