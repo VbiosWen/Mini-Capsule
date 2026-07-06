@@ -45,14 +45,11 @@ struct ClipItemRow: View {
         .onTapGesture {
             onTap()
         }
-        .overlay {
-            if isHovering, item.contentTypeRaw == "image",
+        .popover(isPresented: $isHovering, arrowEdge: .trailing) {
+            if item.contentTypeRaw == "image",
                let imageData = item.imageData, let nsImage = NSImage(data: imageData) {
-                HStack {
-                    Spacer()
-                    imagePreview(nsImage)
-                        .offset(x: 280 + 8, y: 0)
-                }
+                imagePreview(nsImage)
+                    .padding(8)
             }
         }
     }
