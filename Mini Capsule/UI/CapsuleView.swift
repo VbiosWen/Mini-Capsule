@@ -33,6 +33,7 @@ struct CapsuleView: View {
                         PasteService.copyToClipboard(item)
                         item.pasteCount += 1
                         item.lastPastedAt = Date()
+                        item.timestamp = Date()
                         try? modelContext.save()
                     },
                     onItemDelete: { item in
@@ -100,27 +101,37 @@ struct CapsuleView: View {
     private var windowDragGesture: some Gesture {
         DragGesture(minimumDistance: 0)
             .onChanged { value in
-                // Start 0.5s delay on first drag event
+                // Start 0.5s delay on first drag event — also cancel hover expand
                 if dragWorkItem == nil && !isDragPrimed && !isDragging {
+                    // Cancel any pending hover expansion so drag doesn't expand the capsule
+                    hoverWorkItem?.cancel()
+                    if isExpanded {
+                        withAnimation(.spring(response: 0.25, dampingFraction: 0.8)) {
+                            isExpanded = false
+                        }
+                        postExpandedNotification()
+                    }
+
                     let workItem = DispatchWorkItem {
                         isDragPrimed = true
+                        // Capture the translation at the moment drag primes to avoid jump
+                        previousDragTranslation = value.translation
                     }
                     dragWorkItem = workItem
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.5, execute: workItem)
                 }
 
-                guard let panel = NSApp.windows.first(where: { $0 is NSPanel }) else { return }
+                guard let panel = NSApp.windows.first(where: { $0 is CapsulePanel }) else { return }
 
-                // Capture frame and reset delta tracking before drag actually moves the window
+                // Wait for drag to prime before moving
                 if !isDragPrimed {
                     if dragStartFrame == nil {
                         dragStartFrame = panel.frame
-                        previousDragTranslation = .zero
                     }
                     return
                 }
 
-                // Use incremental delta from current window position
+                // Use incremental delta from previous translation to avoid jumps
                 let prev = previousDragTranslation ?? .zero
                 let deltaX = value.translation.width - prev.width
                 let deltaY = value.translation.height - prev.height
@@ -136,7 +147,7 @@ struct CapsuleView: View {
                 dragWorkItem = nil
 
                 if isDragging {
-                    if let panel = NSApp.windows.first(where: { $0 is NSPanel }) {
+                    if let panel = NSApp.windows.first(where: { $0 is CapsulePanel }) {
                         UserDefaults.standard.set([
                             "x": panel.frame.origin.x,
                             "y": panel.frame.origin.y,
