@@ -15,6 +15,7 @@ struct CapsuleView: View {
     @State private var isCapturing = false
     @State private var searchText = ""
     @State private var hoverWorkItem: DispatchWorkItem?
+    @State private var isExpandedReady = false
 
     // Long-press drag state
     @State private var isDragPrimed = false
@@ -29,6 +30,7 @@ struct CapsuleView: View {
                 CapsuleExpandedView(
                     searchText: $searchText,
                     isDragPrimed: isDragPrimed,
+                    isExpandedReady: isExpandedReady,
                     onItemTap: { item in
                         PasteService.copyToClipboard(item)
                         item.pasteCount += 1
@@ -62,18 +64,23 @@ struct CapsuleView: View {
             if dragWorkItem != nil || isDragPrimed || isDragging { return }
 
             if hovering {
+                isExpandedReady = false
                 let workItem = DispatchWorkItem {
                     withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
                         isExpanded = true
                         searchText = ""
                     }
                     postExpandedNotification()
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+                        isExpandedReady = true
+                    }
                 }
                 hoverWorkItem = workItem
                 let expandDelay = UserDefaults.standard.double(forKey: "hoverExpandDelay")
                 let effectiveExpandDelay = expandDelay > 0 ? expandDelay : 0.3
                 DispatchQueue.main.asyncAfter(deadline: .now() + effectiveExpandDelay, execute: workItem)
             } else {
+                isExpandedReady = false
                 let workItem = DispatchWorkItem {
                     withAnimation(.spring(response: 0.25, dampingFraction: 0.8)) {
                         isExpanded = false
