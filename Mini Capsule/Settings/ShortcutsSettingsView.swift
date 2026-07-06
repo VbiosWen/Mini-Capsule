@@ -25,6 +25,12 @@ final class ShortcutCaptureManager: ObservableObject {
         }
     }
 
+    deinit {
+        if let mon = monitor {
+            NSEvent.removeMonitor(mon)
+        }
+    }
+
     func stopCapture() {
         if let mon = monitor {
             NSEvent.removeMonitor(mon)
@@ -53,25 +59,23 @@ final class ShortcutCaptureManager: ObservableObject {
 
 struct ShortcutsSettingsView: View {
     @EnvironmentObject var settings: SettingsStore
-    @StateObject private var captureManager = ShortcutCaptureManager()
-
     var body: some View {
         Form {
             Section {
                 ShortcutRowView(
                     label: "显示/隐藏胶囊",
                     shortcut: $settings.showHideShortcut,
-                    allLabels: allLabels
+                    otherShortcuts: [settings.quickPasteShortcut, settings.togglePinShortcut]
                 )
                 ShortcutRowView(
                     label: "快速粘贴上一条",
                     shortcut: $settings.quickPasteShortcut,
-                    allLabels: allLabels
+                    otherShortcuts: [settings.showHideShortcut, settings.togglePinShortcut]
                 )
                 ShortcutRowView(
                     label: "切换置顶",
                     shortcut: $settings.togglePinShortcut,
-                    allLabels: allLabels
+                    otherShortcuts: [settings.showHideShortcut, settings.quickPasteShortcut]
                 )
             } header: {
                 Text("快捷键")
@@ -85,9 +89,6 @@ struct ShortcutsSettingsView: View {
         .frame(width: 450, height: 250)
     }
 
-    private var allLabels: [String] {
-        ["显示/隐藏胶囊", "快速粘贴上一条", "切换置顶"]
-    }
 }
 
 // MARK: - Row View
@@ -95,7 +96,7 @@ struct ShortcutsSettingsView: View {
 private struct ShortcutRowView: View {
     let label: String
     @Binding var shortcut: String
-    let allLabels: [String]
+    let otherShortcuts: [String]
 
     @StateObject private var captureManager = ShortcutCaptureManager()
 
@@ -166,15 +167,10 @@ private struct ShortcutRowView: View {
     }
 
     private func checkConflicts(_ newShortcut: String) {
-        // Check other Mini Capsule shortcuts
-        let allBindings: [String: String] = [
-            "显示/隐藏胶囊": UserDefaults.standard.string(forKey: "showHideShortcut") ?? "cmd+shift+V",
-            "快速粘贴上一条": UserDefaults.standard.string(forKey: "quickPasteShortcut") ?? "cmd+shift+C",
-            "切换置顶": UserDefaults.standard.string(forKey: "togglePinShortcut") ?? "",
-        ]
-        for (otherLabel, otherShortcut) in allBindings {
-            if otherLabel != label && otherShortcut == newShortcut && !newShortcut.isEmpty {
-                conflictMessage = "与「\(otherLabel)」冲突"
+        // Check other Mini Capsule shortcuts using actual binding values
+        for other in otherShortcuts {
+            if other == newShortcut && !newShortcut.isEmpty {
+                conflictMessage = "与其他快捷键冲突"
                 return
             }
         }
