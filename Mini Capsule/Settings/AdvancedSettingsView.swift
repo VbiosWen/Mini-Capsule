@@ -110,7 +110,6 @@ struct AdvancedSettingsView: View {
 
     private func importData() {
         isOperating = true
-        defer { isOperating = false }
 
         let panel = NSOpenPanel()
         panel.title = "导入剪贴板数据"
@@ -125,6 +124,7 @@ struct AdvancedSettingsView: View {
                         alertTitle = "导入失败"
                         alertMessage = "文件为空或格式不正确。"
                         showAlert = true
+                        isOperating = false
                         return
                     }
                     try settings.importData(data, context: modelContext)
@@ -138,6 +138,7 @@ struct AdvancedSettingsView: View {
                     showAlert = true
                 }
             }
+            isOperating = false
         }
     }
 }
