@@ -40,6 +40,22 @@ final class SettingsStore: ObservableObject {
 
     @AppStorage("iCloudSyncEnabled") var iCloudSyncEnabled: Bool = false
 
+    // MARK: - General
+
+    @AppStorage("launchAtLogin") var launchAtLogin: Bool = false
+    @AppStorage("showInMenuBar") var showInMenuBar: Bool = true
+    @AppStorage("showFloatingPanel") var showFloatingPanel: Bool = true
+    @AppStorage("collapsedStyle") var collapsedStyle: String = "capsule"
+    @AppStorage("hoverExpandDelay") var hoverExpandDelay: Double = 0.3
+    @AppStorage("hoverCollapseDelay") var hoverCollapseDelay: Double = 1.0
+
+    // MARK: - Appearance
+
+    @AppStorage("panelOpacityUnfocused") var panelOpacityUnfocused: Double = 0.6
+    @AppStorage("backgroundImageData") var backgroundImageData: Data = Data()
+    @AppStorage("dotColorMode") var dotColorMode: String = "auto"
+    @AppStorage("dotCustomColor") var dotCustomColor: String = "#007AFF"
+
     // MARK: - Actions
 
     /// Reset all settings to their default values.
@@ -53,6 +69,16 @@ final class SettingsStore: ObservableObject {
         quickPasteShortcut = "cmd+shift+C"
         togglePinShortcut = ""
         iCloudSyncEnabled = false
+        launchAtLogin = false
+        showInMenuBar = true
+        showFloatingPanel = true
+        collapsedStyle = "capsule"
+        hoverExpandDelay = 0.3
+        hoverCollapseDelay = 1.0
+        panelOpacityUnfocused = 0.6
+        backgroundImageData = Data()
+        dotColorMode = "auto"
+        dotCustomColor = "#007AFF"
     }
 
     /// Serialize all ClipItem records to JSON.
