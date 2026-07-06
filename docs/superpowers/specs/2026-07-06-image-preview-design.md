@@ -11,21 +11,22 @@
 
 ## 方案
 
-点击图片条目时在条目右侧弹出 200×200 的预览浮层，点击其他区域关闭。
+点击图片条目时在条目右侧弹出预览浮层（最大 200×300），点击其他区域关闭。
 
 ---
 
 ## 交互
 
-- **触发**：点击 `contentTypeRaw == "image"` 的条目 → 条目右侧弹出 200×200 预览浮层
+- **触发**：点击 `contentTypeRaw == "image"` 的条目 → 条目右侧弹出预览浮层
 - **关闭**：点击展开面板内其他区域（其他条目、搜索栏、空白处）→ 预览消失
 - **图片非图片区分**：图片条目的点击弹出预览，不执行粘贴；文本/文件条目点击仍执行粘贴
+- **图片尺寸**：显示原始图片的实际尺寸，等比缩放，最大不超过 200×300（宽 ≤ 200，高 ≤ 300）。小图不放大保持原尺寸
 - **图片缩放**：`aspectRatio(contentMode: .fit)` 等比缩放，不裁剪
 
 ## 视觉
 
 - 预览浮层：`.ultraThinMaterial` 背景，`RoundedRectangle(cornerRadius: 12)`
-- 固定尺寸：200×200
+- 尺寸：图片实际尺寸，最大 200×300，小图不放大
 - 位置：条目行右侧偏移 8pt
 
 ---
@@ -36,9 +37,9 @@
 
 - 新增 `@State private var showImagePreview: Bool`
 - 图片条目点击时 `showImagePreview.toggle()`
-- 通过 `.overlay` 在条目右侧展示预览：
+- 通过 `.overlay` 在条目右侧展示预览，尺寸取 `min(image.size, 200×300)` 等比缩放：
   ```
-  HStack { Spacer().frame(width: rowWidth + 8); Image(nsImage: ...) }
+  HStack { Spacer().frame(width: rowWidth + 8); Image(nsImage: ...).frame(maxWidth: 200, maxHeight: 300) }
   ```
 - 新增 `var onPreviewStateChanged: ((Bool) -> Void)?` 回调通知父视图
 
