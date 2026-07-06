@@ -153,15 +153,7 @@ struct Mini_CapsuleApp: App {
 
     var body: some Scene {
         #if os(macOS)
-        // macOS: hide main window, capsule window managed by CapsuleAppDelegate
-        WindowGroup {
-            EmptyView()
-                .hidden()
-        }
-        .commands {
-            CommandGroup(replacing: .newItem) {}
-        }
-
+        // macOS: capsule window managed by CapsuleAppDelegate, no main window needed
         Settings {
             TabView {
                 GeneralSettingsView()
