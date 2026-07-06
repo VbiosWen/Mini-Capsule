@@ -46,11 +46,14 @@ struct CapsuleView: View {
                 CapsuleCollapsedView(
                     latestItem: items.first,
                     isCapturing: isCapturing,
-                    isDragPrimed: isDragPrimed
+                    isDragPrimed: isDragPrimed,
+                    collapsedStyle: UserDefaults.standard.string(forKey: "collapsedStyle") ?? "capsule"
                 )
             }
         }
         .simultaneousGesture(windowDragGesture)
+        .opacity(windowOpacity)
+        .animation(.easeInOut(duration: 0.3), value: windowOpacity)
         .onHover { hovering in
             hoverWorkItem?.cancel()
 
@@ -63,7 +66,9 @@ struct CapsuleView: View {
                     postExpandedNotification()
                 }
                 hoverWorkItem = workItem
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3, execute: workItem)
+                let expandDelay = UserDefaults.standard.double(forKey: "hoverExpandDelay")
+                let effectiveExpandDelay = expandDelay > 0 ? expandDelay : 0.3
+                DispatchQueue.main.asyncAfter(deadline: .now() + effectiveExpandDelay, execute: workItem)
             } else {
                 let workItem = DispatchWorkItem {
                     withAnimation(.spring(response: 0.25, dampingFraction: 0.8)) {
@@ -72,7 +77,9 @@ struct CapsuleView: View {
                     postExpandedNotification()
                 }
                 hoverWorkItem = workItem
-                DispatchQueue.main.asyncAfter(deadline: .now() + 1.0, execute: workItem)
+                let collapseDelay = UserDefaults.standard.double(forKey: "hoverCollapseDelay")
+                let effectiveCollapseDelay = collapseDelay > 0 ? collapseDelay : 1.0
+                DispatchQueue.main.asyncAfter(deadline: .now() + effectiveCollapseDelay, execute: workItem)
             }
         }
         .onChange(of: items.first?.id) { _, _ in
@@ -81,6 +88,13 @@ struct CapsuleView: View {
                 isCapturing = false
             }
         }
+    }
+
+    private var windowOpacity: Double {
+        let unfocusedOpacity = UserDefaults.standard.double(forKey: "panelOpacityUnfocused")
+        let effectiveUnfocused = unfocusedOpacity > 0 ? unfocusedOpacity : 0.6
+        // If expanded (hovering), fully opaque. Otherwise use unfocused setting.
+        return isExpanded ? 1.0 : effectiveUnfocused
     }
 
     private var windowDragGesture: some Gesture {

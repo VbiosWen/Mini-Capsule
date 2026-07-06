@@ -7,8 +7,14 @@ final class CapsuleWindowController: NSWindowController, NSWindowDelegate {
     private let modelContainer: ModelContainer
 
     private static let frameKey = "CapsuleWindowFrame"
-    private static let collapsedSize = NSSize(width: 200, height: 36)
+    private static let capsuleCollapsedSize = NSSize(width: 200, height: 36)
+    private static let dotCollapsedSize = NSSize(width: 12, height: 12)
     private static let expandedSize = NSSize(width: 280, height: 360)
+
+    private var currentCollapsedSize: NSSize {
+        let style = UserDefaults.standard.string(forKey: "collapsedStyle") ?? "capsule"
+        return style == "dot" ? Self.dotCollapsedSize : Self.capsuleCollapsedSize
+    }
 
     init(modelContainer: ModelContainer) {
         self.modelContainer = modelContainer
@@ -76,7 +82,8 @@ final class CapsuleWindowController: NSWindowController, NSWindowDelegate {
                   let window = self.window,
                   let isExpanded = notification.userInfo?["isExpanded"] as? Bool else { return }
 
-            let targetSize = isExpanded ? Self.expandedSize : Self.collapsedSize
+            let collapsedSize = self.currentCollapsedSize
+            let targetSize = isExpanded ? Self.expandedSize : collapsedSize
             let currentFrame = window.frame
 
             let newFrame = NSRect(
@@ -87,6 +94,33 @@ final class CapsuleWindowController: NSWindowController, NSWindowDelegate {
             )
 
             window.setFrame(newFrame, display: true, animate: true)
+        }
+
+        // Listen for collapsed style changes
+        NotificationCenter.default.addObserver(
+            forName: UserDefaults.didChangeNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            guard let self = self, let window = self.window else { return }
+            // If currently collapsed, resize to new collapsed size
+            // (expanded state is managed by CapsuleView hover logic)
+        }
+
+        // Listen for show floating panel toggle
+        NotificationCenter.default.addObserver(
+            forName: .showFloatingPanelChanged,
+            object: nil,
+            queue: .main
+        ) { [weak self] notification in
+            guard let self = self,
+                  let window = self.window,
+                  let show = notification.userInfo?["show"] as? Bool else { return }
+            if show {
+                window.makeKeyAndOrderFront(nil)
+            } else {
+                window.orderOut(nil)
+            }
         }
     }
 
@@ -106,25 +140,28 @@ final class CapsuleWindowController: NSWindowController, NSWindowDelegate {
     }
 
     private static func loadFrame() -> NSRect {
+        let style = UserDefaults.standard.string(forKey: "collapsedStyle") ?? "capsule"
+        let size = style == "dot" ? dotCollapsedSize : capsuleCollapsedSize
+
         guard let screen = NSScreen.main else {
-            return NSRect(x: 0, y: 0, width: collapsedSize.width, height: collapsedSize.height)
+            return NSRect(x: 0, y: 0, width: size.width, height: size.height)
         }
         let screenWidth = screen.visibleFrame.width
         let screenHeight = screen.visibleFrame.maxY
 
-        var x = (screenWidth - collapsedSize.width) / 2
-        var y = screenHeight - collapsedSize.height - 40
+        var x = (screenWidth - size.width) / 2
+        var y = screenHeight - size.height - 40
 
         // Restore saved position, clamping to visible screen bounds
         if let dict = UserDefaults.standard.dictionary(forKey: frameKey) as? [String: CGFloat],
            let savedX = dict["x"], let savedY = dict["y"] {
             let screenFrame = screen.visibleFrame
-            let clampedX = min(max(savedX, screenFrame.minX), screenFrame.maxX - collapsedSize.width)
-            let clampedY = min(max(savedY, screenFrame.minY), screenFrame.maxY - collapsedSize.height)
+            let clampedX = min(max(savedX, screenFrame.minX), screenFrame.maxX - size.width)
+            let clampedY = min(max(savedY, screenFrame.minY), screenFrame.maxY - size.height)
             x = clampedX
             y = clampedY
         }
 
-        return NSRect(x: x, y: y, width: collapsedSize.width, height: collapsedSize.height)
+        return NSRect(x: x, y: y, width: size.width, height: size.height)
     }
 }
