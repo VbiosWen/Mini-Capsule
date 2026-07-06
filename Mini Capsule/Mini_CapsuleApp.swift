@@ -23,6 +23,7 @@ class CapsuleAppDelegate: NSObject, NSApplicationDelegate {
 
     private var capsuleWindowController: CapsuleWindowController?
     private var clipboardMonitor: ClipboardMonitor?
+    private var shortcutMonitor: Any?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         // Hide from Dock and make the app a background accessory
@@ -43,6 +44,66 @@ class CapsuleAppDelegate: NSObject, NSApplicationDelegate {
         let monitor = ClipboardMonitor()
         monitor.start(context: Self.sharedModelContainer.mainContext)
         clipboardMonitor = monitor
+
+        registerShortcuts()
+    }
+
+    private func registerShortcuts() {
+        shortcutMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
+            guard let self = self else { return event }
+
+            let combo = self.shortcutString(from: event)
+
+            let showHide = UserDefaults.standard.string(forKey: "showHideShortcut") ?? "cmd+shift+V"
+            let quickPaste = UserDefaults.standard.string(forKey: "quickPasteShortcut") ?? "cmd+shift+C"
+            let togglePin = UserDefaults.standard.string(forKey: "togglePinShortcut") ?? ""
+
+            if combo == showHide {
+                self.capsuleWindowController?.toggleWindow()
+                return nil
+            }
+            if combo == quickPaste {
+                self.performQuickPaste()
+                return nil
+            }
+            if !togglePin.isEmpty && combo == togglePin {
+                self.performTogglePin()
+                return nil
+            }
+
+            return event
+        }
+    }
+
+    private func shortcutString(from event: NSEvent) -> String {
+        var parts: [String] = []
+        if event.modifierFlags.contains(.command) { parts.append("cmd") }
+        if event.modifierFlags.contains(.shift) { parts.append("shift") }
+        if event.modifierFlags.contains(.option) { parts.append("option") }
+        if event.modifierFlags.contains(.control) { parts.append("control") }
+        if let key = event.charactersIgnoringModifiers?.lowercased() {
+            parts.append(key)
+        }
+        return parts.joined(separator: "+")
+    }
+
+    private func performQuickPaste() {
+        guard let context = clipboardMonitor?.context else { return }
+        let latest = try? context.fetch(
+            FetchDescriptor<ClipItem>(sortBy: [SortDescriptor(\.timestamp, order: .reverse)])
+        )
+        guard let item = latest?.first else { return }
+        PasteService.copyToClipboard(item)
+    }
+
+    private func performTogglePin() {
+        guard let context = clipboardMonitor?.context else { return }
+        let items = try? context.fetch(
+            FetchDescriptor<ClipItem>(sortBy: [SortDescriptor(\.timestamp, order: .reverse)])
+        )
+        guard let latest = items?.first else { return }
+        latest.isPinned.toggle()
+        try? context.save()
     }
 
     func applicationWillTerminate(_ notification: Notification) {

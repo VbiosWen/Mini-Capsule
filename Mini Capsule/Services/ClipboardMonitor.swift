@@ -8,7 +8,7 @@ import CryptoKit
 final class ClipboardMonitor: ObservableObject {
     private var timer: Timer?
     private var lastChangeCount: Int = NSPasteboard.general.changeCount
-    private var context: ModelContext?
+    private(set) var context: ModelContext?
 
     private var currentPollingInterval: TimeInterval {
         let interval = UserDefaults.standard.double(forKey: "pollingInterval")

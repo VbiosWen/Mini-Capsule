@@ -57,6 +57,15 @@ final class CapsuleWindowController: NSWindowController, NSWindowDelegate {
         window?.makeKeyAndOrderFront(nil)
     }
 
+    func toggleWindow() {
+        guard let window = window else { return }
+        if window.isVisible {
+            window.orderOut(nil)
+        } else {
+            window.makeKeyAndOrderFront(nil)
+        }
+    }
+
     private func observeExpandedState() {
         NotificationCenter.default.addObserver(
             forName: .capsuleDidChangeExpanded,
