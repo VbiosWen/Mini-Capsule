@@ -58,6 +58,9 @@ struct CapsuleView: View {
         .onHover { hovering in
             hoverWorkItem?.cancel()
 
+            // Don't expand/collapse while a drag is in progress
+            if dragWorkItem != nil || isDragPrimed || isDragging { return }
+
             if hovering {
                 let workItem = DispatchWorkItem {
                     withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
@@ -101,9 +104,9 @@ struct CapsuleView: View {
     private var windowDragGesture: some Gesture {
         DragGesture(minimumDistance: 0)
             .onChanged { value in
-                // Start 0.5s delay on first drag event — also cancel hover expand
+                // Start 0.5s delay on first drag event
                 if dragWorkItem == nil && !isDragPrimed && !isDragging {
-                    // Cancel any pending hover expansion so drag doesn't expand the capsule
+                    // Cancel any pending hover expansion
                     hoverWorkItem?.cancel()
                     if isExpanded {
                         withAnimation(.spring(response: 0.25, dampingFraction: 0.8)) {
@@ -114,8 +117,6 @@ struct CapsuleView: View {
 
                     let workItem = DispatchWorkItem {
                         isDragPrimed = true
-                        // Capture the translation at the moment drag primes to avoid jump
-                        previousDragTranslation = value.translation
                     }
                     dragWorkItem = workItem
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.5, execute: workItem)
@@ -125,13 +126,16 @@ struct CapsuleView: View {
 
                 // Wait for drag to prime before moving
                 if !isDragPrimed {
-                    if dragStartFrame == nil {
-                        dragStartFrame = panel.frame
-                    }
                     return
                 }
 
-                // Use incremental delta from previous translation to avoid jumps
+                // Capture current translation as baseline on the first frame after priming
+                if previousDragTranslation == nil {
+                    previousDragTranslation = value.translation
+                    return
+                }
+
+                // Incremental delta from previous frame — no jump
                 let prev = previousDragTranslation ?? .zero
                 let deltaX = value.translation.width - prev.width
                 let deltaY = value.translation.height - prev.height
