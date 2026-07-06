@@ -81,6 +81,14 @@ struct CapsuleExpandedView: View {
         .frame(width: 280, height: 360)
         .background {
             ZStack {
+                // Background image (if set)
+                if let imageData = UserDefaults.standard.data(forKey: "backgroundImageData"),
+                   let nsImage = NSImage(data: imageData) {
+                    Image(nsImage: nsImage)
+                        .resizable()
+                        .aspectRatio(contentMode: .fill)
+                }
+
                 Rectangle()
                     .fill(.ultraThinMaterial)
                 if isDragPrimed {
