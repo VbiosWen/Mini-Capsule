@@ -4,6 +4,7 @@ import SwiftUI
 struct CapsuleCollapsedView: View {
     let latestItem: ClipItem?
     let isCapturing: Bool
+    let isDragPrimed: Bool
 
     var body: some View {
         HStack(spacing: 8) {
@@ -22,9 +23,26 @@ struct CapsuleCollapsedView: View {
         .padding(.horizontal, 16)
         .padding(.vertical, 8)
         .frame(width: 200, height: 36)
-        .background(.ultraThinMaterial)
+        .background {
+            ZStack {
+                // Base material
+                Rectangle()
+                    .fill(.ultraThinMaterial)
+
+                // Drag-primed glow overlay
+                if isDragPrimed {
+                    Rectangle()
+                        .fill(Color.white.opacity(0.1))
+                }
+            }
+        }
         .clipShape(Capsule())
-        .shadow(color: .black.opacity(0.15), radius: 8, y: 4)
+        .shadow(
+            color: isDragPrimed ? .white.opacity(0.3) : .black.opacity(0.15),
+            radius: isDragPrimed ? 6 : 8,
+            y: isDragPrimed ? 0 : 4
+        )
+        .animation(.easeInOut(duration: 0.2), value: isDragPrimed)
     }
 
     private var summaryText: String {
