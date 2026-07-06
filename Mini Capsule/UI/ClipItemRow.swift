@@ -5,8 +5,10 @@ struct ClipItemRow: View {
     let item: ClipItem
     var onTap: () -> Void
     var onDelete: () -> Void
+    var onPreviewStateChanged: ((Bool) -> Void)?
 
     @State private var isHovering = false
+    @State private var showImagePreview = false
 
     var body: some View {
         HStack(spacing: 10) {
@@ -43,8 +45,44 @@ struct ClipItemRow: View {
             isHovering = hovering
         }
         .onTapGesture {
-            onTap()
+            if item.contentTypeRaw == "image" {
+                showImagePreview.toggle()
+                onPreviewStateChanged?(showImagePreview)
+            } else {
+                onTap()
+            }
         }
+        .overlay {
+            if showImagePreview, let imageData = item.imageData, let nsImage = NSImage(data: imageData) {
+                HStack {
+                    Spacer()
+                    imagePreview(nsImage)
+                        .offset(x: 280 + 8, y: 0)
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func imagePreview(_ nsImage: NSImage) -> some View {
+        let imageSize = nsImage.size
+        let maxWidth: CGFloat = 200
+        let maxHeight: CGFloat = 300
+
+        // Calculate display size: min(original, max), preserving aspect ratio
+        let scaleX = imageSize.width > maxWidth ? maxWidth / imageSize.width : 1.0
+        let scaleY = imageSize.height > maxHeight ? maxHeight / imageSize.height : 1.0
+        let scale = min(scaleX, scaleY)
+        let displayWidth = imageSize.width * scale
+        let displayHeight = imageSize.height * scale
+
+        Image(nsImage: nsImage)
+            .resizable()
+            .aspectRatio(contentMode: .fit)
+            .frame(width: displayWidth, height: displayHeight)
+            .background(.ultraThinMaterial)
+            .clipShape(RoundedRectangle(cornerRadius: 12))
+            .shadow(color: .black.opacity(0.15), radius: 8, y: 4)
     }
 
     private var typeIcon: some View {
