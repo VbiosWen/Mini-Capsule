@@ -3,6 +3,12 @@ import AppKit
 import SwiftUI
 import SwiftData
 
+/// Custom NSPanel that can become key when programmatically requested,
+/// even with the nonactivatingPanel style — required for TextField input.
+final class CapsulePanel: NSPanel {
+    override var canBecomeKey: Bool { true }
+}
+
 final class CapsuleWindowController: NSWindowController, NSWindowDelegate {
     private let modelContainer: ModelContainer
 
@@ -21,7 +27,7 @@ final class CapsuleWindowController: NSWindowController, NSWindowDelegate {
 
         let savedFrame = Self.loadFrame()
 
-        let panel = NSPanel(
+        let panel = CapsulePanel(
             contentRect: savedFrame,
             styleMask: [.borderless, .nonactivatingPanel],
             backing: .buffered,
@@ -42,7 +48,7 @@ final class CapsuleWindowController: NSWindowController, NSWindowDelegate {
 
         super.init(window: panel)
 
-        if let window = self.window as? NSPanel {
+        if let window = self.window as? CapsulePanel {
             window.delegate = self
         }
 
@@ -94,6 +100,11 @@ final class CapsuleWindowController: NSWindowController, NSWindowDelegate {
             )
 
             window.setFrame(newFrame, display: true, animate: true)
+
+            // When expanded, make key so TextField can receive input
+            if isExpanded {
+                window.makeKey()
+            }
         }
 
         // Listen for collapsed style changes
