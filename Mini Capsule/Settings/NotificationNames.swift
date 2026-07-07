@@ -31,18 +31,6 @@ extension Notification.Name {
     /// Posted when Escape key is pressed in the expanded capsule.
     static let capsuleEscapePressed = Notification.Name("capsuleEscapePressed")
 
-    /// Posted to edit a clip item's text content.
-    /// UserInfo contains `["item": ClipItem, "content": String]`.
-    static let capsuleEditTextItem = Notification.Name("capsuleEditTextItem")
-
-    /// Posted to paste a clip item to the front application.
-    /// UserInfo contains `["item": ClipItem]`.
-    static let capsulePasteItemToFront = Notification.Name("capsulePasteItemToFront")
-
-    /// Posted to toggle the pin state of a clip item.
-    /// UserInfo contains `["item": ClipItem]`.
-    static let capsuleTogglePinItem = Notification.Name("capsuleTogglePinItem")
-
     /// Posted to request editing a text item. UserInfo: ["itemID": UUID, "content": String]
     static let editTextItem = Notification.Name("editTextItem")
 

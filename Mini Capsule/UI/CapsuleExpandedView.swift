@@ -53,22 +53,6 @@ struct CapsuleExpandedView: View {
                     capsuleViewModel.collapse()
                 }
             }
-            .onReceive(NotificationCenter.default.publisher(for: .capsuleEditTextItem)) { notification in
-                guard let userInfo = notification.userInfo,
-                      let item = userInfo["item"] as? ClipItem,
-                      let content = userInfo["content"] as? String else { return }
-                viewModel.editText(item, content: content)
-            }
-            .onReceive(NotificationCenter.default.publisher(for: .capsulePasteItemToFront)) { notification in
-                guard let userInfo = notification.userInfo,
-                      let item = userInfo["item"] as? ClipItem else { return }
-                viewModel.pasteItem(item)
-            }
-            .onReceive(NotificationCenter.default.publisher(for: .capsuleTogglePinItem)) { notification in
-                guard let userInfo = notification.userInfo,
-                      let item = userInfo["item"] as? ClipItem else { return }
-                viewModel.togglePin(item)
-            }
             .onReceive(NotificationCenter.default.publisher(for: .editTextItem)) { notification in
                 guard let itemID = notification.userInfo?["itemID"] as? UUID,
                       let content = notification.userInfo?["content"] as? String,

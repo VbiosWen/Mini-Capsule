@@ -39,7 +39,9 @@ struct KeyboardEventHandler: NSViewRepresentable {
             guard let vm = viewModel, !vm.filteredItems.isEmpty else { return false }
 
             // Check for Cmd+A first (select all)
-            if event.modifierFlags.contains(.command) && event.keyCode == 0 {
+            if event.modifierFlags.contains(.command),
+               let chars = event.charactersIgnoringModifiers?.lowercased(),
+               chars == "a" {
                 vm.selectAll()
                 return true
             }
