@@ -42,4 +42,13 @@ extension Notification.Name {
     /// Posted to toggle the pin state of a clip item.
     /// UserInfo contains `["item": ClipItem]`.
     static let capsuleTogglePinItem = Notification.Name("capsuleTogglePinItem")
+
+    /// Posted to request editing a text item. UserInfo: ["itemID": UUID, "content": String]
+    static let editTextItem = Notification.Name("editTextItem")
+
+    /// Posted to request pasting an item to frontmost app. UserInfo: ["itemID": UUID]
+    static let pasteItemToFront = Notification.Name("pasteItemToFront")
+
+    /// Posted to toggle pin status of an item. UserInfo: ["itemID": UUID]
+    static let togglePinItem = Notification.Name("togglePinItem")
 }

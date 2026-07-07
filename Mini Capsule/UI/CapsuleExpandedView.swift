@@ -69,6 +69,22 @@ struct CapsuleExpandedView: View {
                       let item = userInfo["item"] as? ClipItem else { return }
                 viewModel.togglePin(item)
             }
+            .onReceive(NotificationCenter.default.publisher(for: .editTextItem)) { notification in
+                guard let itemID = notification.userInfo?["itemID"] as? UUID,
+                      let content = notification.userInfo?["content"] as? String,
+                      let item = viewModel.filteredItems.first(where: { $0.id == itemID }) else { return }
+                viewModel.editText(item, content: content)
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .pasteItemToFront)) { notification in
+                guard let itemID = notification.userInfo?["itemID"] as? UUID,
+                      let item = viewModel.filteredItems.first(where: { $0.id == itemID }) else { return }
+                viewModel.pasteItem(item)
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .togglePinItem)) { notification in
+                guard let itemID = notification.userInfo?["itemID"] as? UUID,
+                      let item = viewModel.filteredItems.first(where: { $0.id == itemID }) else { return }
+                viewModel.togglePin(item)
+            }
             .background(
                 KeyboardEventHandler(viewModel: viewModel)
             )
