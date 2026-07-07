@@ -169,6 +169,7 @@ struct SettingsStoreTests {
         store.pollingInterval = 1.5
         sink.cancel()
         #expect(callCount >= 1, "Property change must fire objectWillChange at least once")
+        store.resetAll()
     }
 
     @Test func defaultValuesAreConsistent() async throws {
@@ -273,11 +274,10 @@ struct CapsuleWindowControllerTests {
     }
 
     @Test func updatesCornerRadiusOnStyleChangeWhenCollapsed() async throws {
-        let defaults = UserDefaults.standard
-        defaults.set("capsule", forKey: "collapsedStyle")
-
         let container = try Self.makeContainer()
-        let controller = CapsuleWindowController(modelContainer: container, settingsStore: SettingsStore())
+        let store = SettingsStore()
+        store.collapsedStyle = "capsule"
+        let controller = CapsuleWindowController(modelContainer: container, settingsStore: store)
 
         // Start collapsed as capsule → 18
         #expect(controller.window?.contentView?.layer?.cornerRadius == 18)
@@ -298,20 +298,15 @@ struct CapsuleWindowControllerTests {
         #expect(controller.window?.contentView?.layer?.cornerRadius == 18)
 
         // Change style to dot while collapsed
-        defaults.set("dot", forKey: "collapsedStyle")
-        NotificationCenter.default.post(
-            name: UserDefaults.didChangeNotification,
-            object: nil
-        )
+        store.collapsedStyle = "dot"
         #expect(controller.window?.contentView?.layer?.cornerRadius == 6)
     }
 
     @Test func doesNotUpdateCornerRadiusOnStyleChangeWhenExpanded() async throws {
-        let defaults = UserDefaults.standard
-        defaults.set("capsule", forKey: "collapsedStyle")
-
         let container = try Self.makeContainer()
-        let controller = CapsuleWindowController(modelContainer: container, settingsStore: SettingsStore())
+        let store = SettingsStore()
+        store.collapsedStyle = "capsule"
+        let controller = CapsuleWindowController(modelContainer: container, settingsStore: store)
 
         // Expand
         NotificationCenter.default.post(
@@ -322,11 +317,7 @@ struct CapsuleWindowControllerTests {
         #expect(controller.window?.contentView?.layer?.cornerRadius == 12)
 
         // Change style to dot while expanded — should NOT affect cornerRadius
-        defaults.set("dot", forKey: "collapsedStyle")
-        NotificationCenter.default.post(
-            name: UserDefaults.didChangeNotification,
-            object: nil
-        )
+        store.collapsedStyle = "dot"
         #expect(controller.window?.contentView?.layer?.cornerRadius == 12)
     }
 

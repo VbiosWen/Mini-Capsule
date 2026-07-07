@@ -2,6 +2,7 @@
 import AppKit
 import SwiftUI
 import SwiftData
+import Combine
 
 /// Custom NSPanel that can become key when programmatically requested,
 /// even with the nonactivatingPanel style — required for TextField input.
@@ -14,6 +15,7 @@ final class CapsuleWindowController: NSWindowController, NSWindowDelegate {
     private let settingsStore: SettingsStore
     private var isExpanded = false
     private var observers: [NSObjectProtocol] = []
+    private var cancellables = Set<AnyCancellable>()
 
     // Drag monitoring
     private var dragMonitor: Any?
@@ -21,7 +23,6 @@ final class CapsuleWindowController: NSWindowController, NSWindowDelegate {
     private var isDragActive = false
     private var previousDragLocation: NSPoint?
 
-    private static let frameKey = "CapsuleWindowFrame"
     private static let capsuleCollapsedSize = NSSize(width: 200, height: 36)
     private static let dotCollapsedSize = NSSize(width: 12, height: 12)
     private static let expandedSize = NSSize(width: 280, height: 360)
@@ -194,33 +195,25 @@ final class CapsuleWindowController: NSWindowController, NSWindowDelegate {
             }
         )
 
-        // Listen for collapsed style changes
-        observers.append(
-            NotificationCenter.default.addObserver(
-                forName: UserDefaults.didChangeNotification,
-                object: nil,
-                queue: .main
-            ) { [weak self] _ in
-                guard let self = self, let window = self.window else { return }
-                // If collapsed, update cornerRadius to match current style
-                if !self.isExpanded {
-                    let radius: CGFloat = self.settingsStore.collapsedStyle == "dot" ? 6 : 18
-                    window.contentView?.layer?.cornerRadius = radius
-
-                    // Also resize window to match new collapsed size
-                    let size = self.settingsStore.collapsedStyle == "dot" ? Self.dotCollapsedSize : Self.capsuleCollapsedSize
-                    if window.frame.size != size {
-                        let newFrame = NSRect(
-                            x: window.frame.midX - size.width / 2,
-                            y: window.frame.maxY - size.height,
-                            width: size.width,
-                            height: size.height
-                        )
-                        window.setFrame(newFrame, display: true, animate: true)
-                    }
+        // Listen for collapsed style changes via settings store
+        settingsStore.objectWillChange
+            .sink { [weak self] _ in
+                guard let self = self, let window = self.window, !self.isExpanded else { return }
+                let style = self.settingsStore.collapsedStyle
+                let radius: CGFloat = style == "dot" ? 6 : 18
+                window.contentView?.layer?.cornerRadius = radius
+                let size = style == "dot" ? Self.dotCollapsedSize : Self.capsuleCollapsedSize
+                if window.frame.size != size {
+                    let newFrame = NSRect(
+                        x: window.frame.midX - size.width / 2,
+                        y: window.frame.maxY - size.height,
+                        width: size.width,
+                        height: size.height
+                    )
+                    window.setFrame(newFrame, display: true, animate: true)
                 }
             }
-        )
+            .store(in: &cancellables)
 
         // Listen for reset position request
         observers.append(
@@ -242,7 +235,7 @@ final class CapsuleWindowController: NSWindowController, NSWindowDelegate {
                 let newFrame = NSRect(x: x, y: y, width: size.width, height: size.height)
 
                 window.setFrame(newFrame, display: true, animate: true)
-                UserDefaults.standard.removeObject(forKey: Self.frameKey)
+                UserDefaults.standard.removeObject(forKey: SettingsKey.capsuleWindowFrameKey)
             }
         )
 
@@ -277,7 +270,7 @@ final class CapsuleWindowController: NSWindowController, NSWindowDelegate {
             "w": frame.size.width,
             "h": frame.size.height
         ]
-        UserDefaults.standard.set(frameDict, forKey: Self.frameKey)
+        UserDefaults.standard.set(frameDict, forKey: SettingsKey.capsuleWindowFrameKey)
     }
 
     private static func loadFrame(style: String) -> NSRect {
@@ -293,7 +286,7 @@ final class CapsuleWindowController: NSWindowController, NSWindowDelegate {
         var y = screenHeight - size.height - 40
 
         // Restore saved position, clamping to visible screen bounds
-        if let dict = UserDefaults.standard.dictionary(forKey: frameKey) as? [String: CGFloat],
+        if let dict = UserDefaults.standard.dictionary(forKey: SettingsKey.capsuleWindowFrameKey) as? [String: CGFloat],
            let savedX = dict["x"], let savedY = dict["y"] {
             let screenFrame = screen.visibleFrame
             let clampedX = min(max(savedX, screenFrame.minX), screenFrame.maxX - size.width)

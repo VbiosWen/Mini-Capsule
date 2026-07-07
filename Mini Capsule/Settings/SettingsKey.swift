@@ -31,4 +31,7 @@ enum SettingsKey: String, CaseIterable {
     case backgroundImageData
     case dotColorMode
     case dotCustomColor
+
+    /// Window frame position persistence key (not a setting, but a shared constant).
+    static let capsuleWindowFrameKey = "CapsuleWindowFrame"
 }

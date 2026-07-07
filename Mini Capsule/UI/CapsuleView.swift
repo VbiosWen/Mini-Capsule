@@ -67,7 +67,7 @@ struct CapsuleView: View {
                     }
                 }
                 hoverWorkItem = workItem
-                let effectiveExpandDelay = settings.hoverExpandDelay
+                let effectiveExpandDelay = settings.hoverExpandDelay > 0 ? settings.hoverExpandDelay : 0.3
                 DispatchQueue.main.asyncAfter(deadline: .now() + effectiveExpandDelay, execute: workItem)
             } else {
                 isExpandedReady = false
@@ -78,7 +78,7 @@ struct CapsuleView: View {
                     postExpandedNotification()
                 }
                 hoverWorkItem = workItem
-                let effectiveCollapseDelay = settings.hoverCollapseDelay
+                let effectiveCollapseDelay = settings.hoverCollapseDelay > 0 ? settings.hoverCollapseDelay : 1.0
                 DispatchQueue.main.asyncAfter(deadline: .now() + effectiveCollapseDelay, execute: workItem)
             }
         }
@@ -103,7 +103,7 @@ struct CapsuleView: View {
     }
 
     private var windowOpacity: Double {
-        let effectiveUnfocused = settings.panelOpacityUnfocused
+        let effectiveUnfocused = settings.panelOpacityUnfocused > 0 ? settings.panelOpacityUnfocused : 0.6
         // If expanded (hovering), fully opaque. Otherwise use unfocused setting.
         return isExpanded ? 1.0 : effectiveUnfocused
     }

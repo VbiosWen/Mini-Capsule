@@ -6,7 +6,7 @@ import CryptoKit
 
 @MainActor
 final class ClipboardMonitor: ObservableObject {
-    private weak var settings: SettingsProtocol?
+    private let settings: SettingsProtocol
     private var timer: Timer?
     private var lastChangeCount: Int = NSPasteboard.general.changeCount
     private(set) var context: ModelContext?
@@ -16,13 +16,11 @@ final class ClipboardMonitor: ObservableObject {
     }
 
     private var currentPollingInterval: TimeInterval {
-        guard let s = settings else { return 0.5 }
-        return s.pollingInterval > 0 ? s.pollingInterval : 0.5
+        return settings.pollingInterval > 0 ? settings.pollingInterval : 0.5
     }
 
     private var maxImageBytes: Int {
-        guard let s = settings else { return 2_000_000 }
-        switch s.imageMaxSizeMB {
+        switch settings.imageMaxSizeMB {
         case 1: return 1_000_000
         case 5: return 5_000_000
         case 0: return Int.max
@@ -31,13 +29,11 @@ final class ClipboardMonitor: ObservableObject {
     }
 
     private var maxHistoryCount: Int {
-        guard let s = settings else { return 200 }
-        return s.historyMaxCount >= 50 ? s.historyMaxCount : 200
+        return settings.historyMaxCount >= 50 ? settings.historyMaxCount : 200
     }
 
     private var isDedupEnabled: Bool {
-        guard let s = settings else { return true }
-        return s.dedupEnabled
+        return settings.dedupEnabled
     }
 
     func start(context: ModelContext) {
