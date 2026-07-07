@@ -79,6 +79,10 @@ final class CapsuleWindowController: NSWindowController, NSWindowDelegate {
         if let monitor = dragMonitor {
             NSEvent.removeMonitor(monitor)
         }
+        for observer in observers {
+            NotificationCenter.default.removeObserver(observer)
+        }
+        observers.removeAll()
     }
 
     required init?(coder: NSCoder) {

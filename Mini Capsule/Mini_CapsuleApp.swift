@@ -130,6 +130,12 @@ class CapsuleAppDelegate: NSObject, NSApplicationDelegate {
         clipboardMonitor?.stop()
         menuBarService?.stop()
     }
+
+    deinit {
+        if let monitor = shortcutMonitor {
+            NSEvent.removeMonitor(monitor)
+        }
+    }
 }
 #endif
 

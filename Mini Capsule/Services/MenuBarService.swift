@@ -8,6 +8,7 @@ final class MenuBarService: NSObject, NSMenuDelegate {
     private var statusItem: NSStatusItem?
     private var context: ModelContext?
     private var menu: NSMenu?
+    private var mouseMonitor: Any?
     private let settings: SettingsProtocol
 
     init(settings: SettingsProtocol) {
@@ -25,7 +26,7 @@ final class MenuBarService: NSObject, NSMenuDelegate {
         statusItem?.button?.sendAction(on: [.leftMouseDown])
 
         // Use mouseDown to show menu
-        NSEvent.addLocalMonitorForEvents(matching: .leftMouseDown) { [weak self] event in
+        mouseMonitor = NSEvent.addLocalMonitorForEvents(matching: .leftMouseDown) { [weak self] event in
             guard let self = self,
                   let button = self.statusItem?.button,
                   event.window == button.window else { return event }
@@ -47,6 +48,10 @@ final class MenuBarService: NSObject, NSMenuDelegate {
     }
 
     func stop() {
+        if let monitor = mouseMonitor {
+            NSEvent.removeMonitor(monitor)
+            mouseMonitor = nil
+        }
         if let item = statusItem {
             NSStatusBar.system.removeStatusItem(item)
         }
