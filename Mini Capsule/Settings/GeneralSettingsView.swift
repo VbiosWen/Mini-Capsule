@@ -90,9 +90,20 @@ struct GeneralSettingsView: View {
                     .font(.system(size: 11))
                     .foregroundColor(.orange)
             }
+
+            Section {
+                Button(action: {
+                    UserDefaults.standard.removeObject(forKey: "CapsuleWindowFrame")
+                    NotificationCenter.default.post(name: .resetCapsulePosition, object: nil)
+                }) {
+                    Label("重置浮动窗位置", systemImage: "arrow.counterclockwise")
+                }
+            } header: {
+                Text("高级")
+            }
         }
         .formStyle(.grouped)
-        .frame(width: 450, height: 320)
+        .frame(width: 450, height: 370)
     }
 
     private func ensureOneModeEnabled() {

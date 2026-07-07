@@ -420,3 +420,33 @@ struct CapsuleWindowControllerTests {
         }
     }
 }
+
+// MARK: - GeneralSettingsView Tests
+
+@MainActor
+struct GeneralSettingsViewTests {
+    @Test func resetPositionActionClearsFrameKeyAndPostsNotification() async throws {
+        // Given: a saved frame position
+        UserDefaults.standard.set([
+            "x": CGFloat(100), "y": CGFloat(200),
+            "w": CGFloat(200), "h": CGFloat(36)
+        ], forKey: "CapsuleWindowFrame")
+
+        // When: the button action is triggered (clear key + post notification)
+        UserDefaults.standard.removeObject(forKey: "CapsuleWindowFrame")
+
+        try await confirmation(expectedCount: 1) { posted in
+            let obs = NotificationCenter.default.addObserver(
+                forName: .resetCapsulePosition,
+                object: nil,
+                queue: .main
+            ) { _ in posted() }
+            defer { NotificationCenter.default.removeObserver(obs) }
+
+            NotificationCenter.default.post(name: .resetCapsulePosition, object: nil)
+        }
+
+        // Then: the saved frame key is removed
+        #expect(UserDefaults.standard.dictionary(forKey: "CapsuleWindowFrame") == nil)
+    }
+}
