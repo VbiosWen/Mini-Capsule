@@ -22,13 +22,16 @@ final class CapsuleWindowController: NSWindowController, NSWindowDelegate {
     private var previousDragLocation: NSPoint?
 
     private static let capsuleCollapsedSize = NSSize(width: 200, height: 36)
-    private static let dotCollapsedSize = NSSize(width: 12, height: 12)
+    private var dotCollapsedSize: NSSize {
+        let diameter = settingsStore.ringDiameter
+        return NSSize(width: diameter, height: diameter)
+    }
     private static let iconCollapsedSize = NSSize(width: 24, height: 24)
     private static let expandedSize = NSSize(width: 280, height: 360)
 
     private var currentCollapsedSize: NSSize {
         switch settingsStore.collapsedStyle {
-        case "dot": return Self.dotCollapsedSize
+        case "dot": return dotCollapsedSize
         case "icon": return Self.iconCollapsedSize
         default: return Self.capsuleCollapsedSize
         }
@@ -72,17 +75,33 @@ final class CapsuleWindowController: NSWindowController, NSWindowDelegate {
         .modelContainer(modelContainer)
         .environment(settingsStore)
 
-        panel.contentView = NSHostingView(rootView: capsuleView)
-        panel.contentView?.wantsLayer = true
-        // Clip window to capsule shape
-        panel.contentView?.layer?.masksToBounds = true
+        // Wrap the hosting view in a plain NSView so that the window's contentView
+        // is NOT an NSHostingView. This prevents SwiftUI's updateAnimatedWindowSize
+        // from trying to auto-resize the window during layout, which causes a
+        // constraint-layout infinite loop when SwiftUI animations are running.
+        let hostingView = NSHostingView(rootView: capsuleView)
+        hostingView.translatesAutoresizingMaskIntoConstraints = false
+
+        let clipView = NSView()
+        clipView.wantsLayer = true
+        clipView.layer?.masksToBounds = true
         let initCornerRadius: CGFloat
         switch settingsStore.collapsedStyle {
-        case "dot": initCornerRadius = 6
+        case "dot": initCornerRadius = settingsStore.ringDiameter / 2
         case "icon": initCornerRadius = 6
         default: initCornerRadius = 18
         }
-        panel.contentView?.layer?.cornerRadius = initCornerRadius
+        clipView.layer?.cornerRadius = initCornerRadius
+
+        clipView.addSubview(hostingView)
+        NSLayoutConstraint.activate([
+            hostingView.topAnchor.constraint(equalTo: clipView.topAnchor),
+            hostingView.leadingAnchor.constraint(equalTo: clipView.leadingAnchor),
+            hostingView.trailingAnchor.constraint(equalTo: clipView.trailingAnchor),
+            hostingView.bottomAnchor.constraint(equalTo: clipView.bottomAnchor)
+        ])
+
+        panel.contentView = clipView
 
         observeExpandedState()
         startDragMonitoring()
@@ -190,13 +209,11 @@ final class CapsuleWindowController: NSWindowController, NSWindowDelegate {
                     cornerRadius = 12
                 } else {
                     switch self.settingsStore.collapsedStyle {
-                    case "dot": cornerRadius = 6
+                    case "dot": cornerRadius = self.settingsStore.ringDiameter / 2
                     case "icon": cornerRadius = 6
                     default: cornerRadius = 18
                     }
                 }
-                window.contentView?.layer?.cornerRadius = cornerRadius
-
                 let newFrame = NSRect(
                     x: currentFrame.midX - targetSize.width / 2,
                     y: currentFrame.maxY - targetSize.height,
@@ -204,13 +221,26 @@ final class CapsuleWindowController: NSWindowController, NSWindowDelegate {
                     height: targetSize.height
                 )
 
-                window.setFrame(newFrame, display: true, animate: true)
-                self.isExpanded = isExpanded
-
-                // When expanded, activate app and make key so TextField can receive input
                 if isExpanded {
+                    // Expand: resize window immediately so content has room to animate in.
+                    window.contentView?.layer?.cornerRadius = cornerRadius
+                    window.setFrame(newFrame, display: true, animate: false)
+                    self.isExpanded = isExpanded
                     NSApp.activate(ignoringOtherApps: true)
                     window.makeKey()
+                } else {
+                    // Collapse: delay the window shrink until the SwiftUI spring
+                    // animation completes. During the transition, both expanded and
+                    // collapsed views are in the hierarchy, so the hosting view
+                    // reports the expanded intrinsic size. Shrinking too early causes
+                    // NSHostingView.updateAnimatedWindowSize to fight our frame change,
+                    // triggering a constraint-layout infinite loop (NSGenericException).
+                    self.isExpanded = isExpanded
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) { [weak self] in
+                        guard let self = self, let window = self.window, !self.isExpanded else { return }
+                        window.contentView?.layer?.cornerRadius = cornerRadius
+                        window.setFrame(newFrame, display: true, animate: false)
+                    }
                 }
             }
         )
@@ -226,14 +256,14 @@ final class CapsuleWindowController: NSWindowController, NSWindowDelegate {
                 let style = UserDefaults.standard.string(forKey: SettingsKey.collapsedStyle.rawValue) ?? "capsule"
                 let radius: CGFloat
                 switch style {
-                case "dot": radius = 6
+                case "dot": radius = self.settingsStore.ringDiameter / 2
                 case "icon": radius = 6
                 default: radius = 18
                 }
                 window.contentView?.layer?.cornerRadius = radius
                 let size: NSSize
                 switch style {
-                case "dot": size = Self.dotCollapsedSize
+                case "dot": size = self.dotCollapsedSize
                 case "icon": size = Self.iconCollapsedSize
                 default: size = Self.capsuleCollapsedSize
                 }
@@ -244,7 +274,7 @@ final class CapsuleWindowController: NSWindowController, NSWindowDelegate {
                         width: size.width,
                         height: size.height
                     )
-                    window.setFrame(newFrame, display: true, animate: true)
+                    window.setFrame(newFrame, display: true, animate: false)
                 }
             }
         )
@@ -262,7 +292,7 @@ final class CapsuleWindowController: NSWindowController, NSWindowDelegate {
 
                 let size: NSSize
                 switch self.settingsStore.collapsedStyle {
-                case "dot": size = Self.dotCollapsedSize
+                case "dot": size = self.dotCollapsedSize
                 case "icon": size = Self.iconCollapsedSize
                 default: size = Self.capsuleCollapsedSize
                 }
@@ -273,7 +303,7 @@ final class CapsuleWindowController: NSWindowController, NSWindowDelegate {
                 let y = screenHeight - size.height - 40
                 let newFrame = NSRect(x: x, y: y, width: size.width, height: size.height)
 
-                window.setFrame(newFrame, display: true, animate: true)
+                window.setFrame(newFrame, display: true, animate: false)
                 self.settingsStore.capsuleWindowFrame = Data()
             }
         )
@@ -317,7 +347,9 @@ final class CapsuleWindowController: NSWindowController, NSWindowDelegate {
     private static func loadFrame(style: String, frameData: Data) -> NSRect {
         let size: NSSize
         switch style {
-        case "dot": size = Self.dotCollapsedSize
+        case "dot":
+            let diameter = UserDefaults.standard.object(forKey: SettingsKey.ringDiameter.rawValue) as? Double ?? 60
+            size = NSSize(width: diameter, height: diameter)
         case "icon": size = Self.iconCollapsedSize
         default: size = Self.capsuleCollapsedSize
         }
