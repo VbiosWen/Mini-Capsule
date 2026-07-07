@@ -11,7 +11,7 @@ struct CapsuleCollapsedView: View {
     var body: some View {
         switch collapsedStyle {
         case "dot":
-            dotView
+            ringView
         case "icon":
             iconView
         default:
@@ -19,12 +19,18 @@ struct CapsuleCollapsedView: View {
         }
     }
 
-    // MARK: - Dot variant
+    // MARK: - Ring variant (rainbow)
 
-    private var dotView: some View {
+    private var ringView: some View {
         Circle()
-            .fill(dotColor)
-            .frame(width: 12, height: 12)
+            .stroke(
+                AngularGradient(
+                    colors: [.red, .orange, .yellow, .green, .blue, .purple, .red],
+                    center: .center
+                ),
+                lineWidth: max(2, settings.ringDiameter * 0.05)
+            )
+            .frame(width: settings.ringDiameter, height: settings.ringDiameter)
             .scaleEffect(isCapturing ? 1.3 : 1.0)
             .animation(.spring(response: 0.3, dampingFraction: 0.6), value: isCapturing)
             .shadow(
@@ -32,19 +38,6 @@ struct CapsuleCollapsedView: View {
                 radius: 4,
                 y: 2
             )
-    }
-
-    private var dotColor: Color {
-        if settings.dotColorMode == "custom" {
-            return Color(hex: settings.dotCustomColor) ?? .blue
-        }
-        guard let item = latestItem else { return .gray }
-        switch item.contentTypeRaw {
-        case "text": return .green
-        case "image": return .blue
-        case "file": return .orange
-        default: return .gray
-        }
     }
 
     // MARK: - Icon variant (E2)

@@ -65,26 +65,17 @@ struct AppearanceSettingsView: View {
             }
 
             Section {
-                LabeledContent("圆点颜色模式") {
-                    Picker("", selection: Bindable(settings).dotColorMode) {
-                        Text("自动").tag("auto")
-                        Text("自定义").tag("custom")
-                    }
-                    .pickerStyle(.menu)
-                    .frame(width: 100)
-                }
-
-                if settings.dotColorMode == "custom" {
-                    LabeledContent("自定义颜色") {
-                        ColorPicker("", selection: Binding(
-                            get: { Color(hex: settings.dotCustomColor) ?? .blue },
-                            set: { settings.dotCustomColor = $0.toHex() }
-                        ))
-                        .frame(width: 60)
+                LabeledContent("圆环直径") {
+                    HStack(spacing: 8) {
+                        Slider(value: Bindable(settings).ringDiameter, in: 20...120, step: 2)
+                            .frame(width: 150)
+                        Text("\(Int(settings.ringDiameter)) px")
+                            .foregroundColor(.secondary)
+                            .frame(width: 40, alignment: .trailing)
                     }
                 }
             } header: {
-                Text("圆点")
+                Text("圆环")
             }
         }
         .formStyle(.grouped)
