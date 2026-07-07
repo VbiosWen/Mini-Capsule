@@ -6,6 +6,12 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		8EB14A6096C571B734C0CC03 /* ClipboardListViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = DBEA4DC6AD8374BA3670F5B5 /* ClipboardListViewModel.swift */; };
+		B3A94D51939C80528E2FCA31 /* ClipboardListViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = DBEA4DC6AD8374BA3670F5B5 /* ClipboardListViewModel.swift */; };
+		E54C43C9A1034B9D0181BBA1 /* ClipboardListViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = DBEA4DC6AD8374BA3670F5B5 /* ClipboardListViewModel.swift */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXContainerItemProxy section */
 		FC9E13512FFABDA100C598E3 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -24,13 +30,14 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		DBEA4DC6AD8374BA3670F5B5 /* ClipboardListViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ClipboardListViewModel.swift; path = "Mini Capsule/UI/ClipboardListViewModel.swift"; sourceTree = SOURCE_ROOT; };
 		FC9E133F2FFABDA000C598E3 /* Mini Capsule.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Mini Capsule.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		FC9E13502FFABDA100C598E3 /* Mini CapsuleTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "Mini CapsuleTests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
 		FC9E135A2FFABDA100C598E3 /* Mini CapsuleUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "Mini CapsuleUITests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
-		FC9E13622FFABDA100C598E3 /* Exceptions for "Mini Capsule" folder in "Mini Capsule" target */ = {
+		FC9E13622FFABDA100C598E3 = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				Info.plist,
@@ -40,24 +47,9 @@
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
-		FC9E13412FFABDA000C598E3 /* Mini Capsule */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-				FC9E13622FFABDA100C598E3 /* Exceptions for "Mini Capsule" folder in "Mini Capsule" target */,
-			);
-			path = "Mini Capsule";
-			sourceTree = "<group>";
-		};
-		FC9E13532FFABDA100C598E3 /* Mini CapsuleTests */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			path = "Mini CapsuleTests";
-			sourceTree = "<group>";
-		};
-		FC9E135D2FFABDA100C598E3 /* Mini CapsuleUITests */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			path = "Mini CapsuleUITests";
-			sourceTree = "<group>";
-		};
+		FC9E13412FFABDA000C598E3 /* Mini Capsule */ = {isa = PBXFileSystemSynchronizedRootGroup; exceptions = (FC9E13622FFABDA100C598E3, ); path = "Mini Capsule"; sourceTree = "<group>"; };
+		FC9E13532FFABDA100C598E3 /* Mini CapsuleTests */ = {isa = PBXFileSystemSynchronizedRootGroup; path = "Mini CapsuleTests"; sourceTree = "<group>"; };
+		FC9E135D2FFABDA100C598E3 /* Mini CapsuleUITests */ = {isa = PBXFileSystemSynchronizedRootGroup; path = "Mini CapsuleUITests"; sourceTree = "<group>"; };
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -92,6 +84,7 @@
 				FC9E13532FFABDA100C598E3 /* Mini CapsuleTests */,
 				FC9E135D2FFABDA100C598E3 /* Mini CapsuleUITests */,
 				FC9E13402FFABDA000C598E3 /* Products */,
+				DBEA4DC6AD8374BA3670F5B5 /* ClipboardListViewModel.swift */,
 			);
 			sourceTree = "<group>";
 		};
@@ -249,6 +242,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				E54C43C9A1034B9D0181BBA1 /* ClipboardListViewModel.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -256,6 +250,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				8EB14A6096C571B734C0CC03 /* ClipboardListViewModel.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -263,6 +258,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				B3A94D51939C80528E2FCA31 /* ClipboardListViewModel.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
