@@ -30,8 +30,7 @@ protocol SettingsProtocol: AnyObject {
     // MARK: - Appearance
     var panelOpacityUnfocused: Double { get set }
     var backgroundImageData: Data { get set }
-    var dotColorMode: String { get set }
-    var dotCustomColor: String { get set }
+    var ringDiameter: Double { get set }
     var capsuleWindowFrame: Data { get set }
 
     // MARK: - Actions

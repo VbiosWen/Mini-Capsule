@@ -29,8 +29,7 @@ enum SettingsKey: String, CaseIterable {
     // Appearance
     case panelOpacityUnfocused
     case backgroundImageData
-    case dotColorMode
-    case dotCustomColor
+    case ringDiameter
 
     /// Window frame position persistence key (JSON-encoded [String: CGFloat]).
     case capsuleWindowFrame
