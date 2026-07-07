@@ -38,8 +38,8 @@ struct CapsuleView: View {
             if hovering {
                 capsuleVM.onHoverEnter()
             } else {
-                // Don't collapse while user is interacting with the panel
-                if capsuleVM.isExpanded, NSApp.keyWindow != nil { return }
+                // Don't collapse while user is interacting with the capsule panel
+                if capsuleVM.isExpanded, NSApp.keyWindow is CapsulePanel { return }
                 capsuleVM.onHoverExit()
             }
         }
