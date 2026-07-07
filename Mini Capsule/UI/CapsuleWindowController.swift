@@ -75,6 +75,7 @@ final class CapsuleWindowController: NSWindowController, NSWindowDelegate {
     }
 
     deinit {
+        dragPrimer?.cancel()
         if let monitor = dragMonitor {
             NSEvent.removeMonitor(monitor)
         }
@@ -126,7 +127,7 @@ final class CapsuleWindowController: NSWindowController, NSWindowDelegate {
                     let dy = current.y - prev.y
                     var origin = self.window?.frame.origin ?? .zero
                     origin.x += dx
-                    origin.y -= dy
+                    origin.y += dy
                     self.window?.setFrameOrigin(origin)
                 }
                 self.previousDragLocation = current
