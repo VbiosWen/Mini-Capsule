@@ -234,7 +234,7 @@ struct CapsuleWindowControllerTests {
         let container = try Self.makeContainer()
         let controller = CapsuleWindowController(modelContainer: container, settingsStore: SettingsStore())
 
-        #expect(controller.window?.contentView?.layer?.cornerRadius == 6)
+        #expect(controller.window?.contentView?.layer?.cornerRadius == 30)
     }
 
     @Test func updatesCornerRadiusOnExpandAndCollapse() async throws {
@@ -261,6 +261,8 @@ struct CapsuleWindowControllerTests {
             object: nil,
             userInfo: ["isExpanded": false]
         )
+        // Wait for the 0.25s async collapse animation to apply
+        try await Task.sleep(for: .seconds(0.3))
         #expect(controller.window?.contentView?.layer?.cornerRadius == 18)
     }
 
@@ -286,11 +288,13 @@ struct CapsuleWindowControllerTests {
             object: nil,
             userInfo: ["isExpanded": false]
         )
+        // Wait for the 0.25s async collapse animation to apply
+        try await Task.sleep(for: .seconds(0.3))
         #expect(controller.window?.contentView?.layer?.cornerRadius == 18)
 
         // Change style to dot while collapsed
         store.collapsedStyle = "dot"
-        #expect(controller.window?.contentView?.layer?.cornerRadius == 6)
+        #expect(controller.window?.contentView?.layer?.cornerRadius == 30)
     }
 
     @Test func doesNotUpdateCornerRadiusOnStyleChangeWhenExpanded() async throws {
