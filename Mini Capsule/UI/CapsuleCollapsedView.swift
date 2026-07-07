@@ -28,7 +28,7 @@ struct CapsuleCollapsedView: View {
                     colors: [.red, .orange, .yellow, .green, .blue, .purple, .red],
                     center: .center
                 ),
-                lineWidth: max(2, settings.ringDiameter * 0.05)
+                lineWidth: settings.ringDiameter * 0.10
             )
             .frame(width: settings.ringDiameter, height: settings.ringDiameter)
             .scaleEffect(isCapturing ? 1.3 : 1.0)
