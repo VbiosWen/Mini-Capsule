@@ -5,6 +5,7 @@ struct ClipItemRow: View {
     let item: ClipItem
     let isSelected: Bool
     let isInteractive: Bool
+    var isMultiSelectMode: Bool = false
     var onTap: () -> Void
     var onDelete: () -> Void
 
