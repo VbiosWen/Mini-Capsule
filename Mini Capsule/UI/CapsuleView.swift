@@ -5,6 +5,9 @@ import AppKit
 
 extension NSNotification.Name {
     static let capsuleDidChangeExpanded = NSNotification.Name("capsuleDidChangeExpanded")
+    static let capsuleDragStarted = NSNotification.Name("capsuleDragStarted")
+    static let capsuleDragEnded = NSNotification.Name("capsuleDragEnded")
+    static let resetCapsulePosition = NSNotification.Name("resetCapsulePosition")
 }
 
 struct CapsuleView: View {
@@ -115,14 +118,15 @@ struct CapsuleView: View {
                 if dragWorkItem == nil && !isDragPrimed && !isDragging {
                     // Cancel any pending hover expansion
                     hoverWorkItem?.cancel()
-                    if isExpanded {
-                        withAnimation(.spring(response: 0.25, dampingFraction: 0.8)) {
-                            isExpanded = false
-                        }
-                        postExpandedNotification()
-                    }
 
                     let workItem = DispatchWorkItem {
+                        // Collapse before dragging so the user moves the smaller window
+                        if isExpanded {
+                            withAnimation(.spring(response: 0.25, dampingFraction: 0.8)) {
+                                isExpanded = false
+                            }
+                            postExpandedNotification()
+                        }
                         isDragPrimed = true
                     }
                     dragWorkItem = workItem

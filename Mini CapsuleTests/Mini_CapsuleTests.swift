@@ -118,4 +118,18 @@ struct SettingsStoreTests {
         // Cleanup
         store.resetAll()
     }
+
+    // MARK: - Notification Names
+
+    @Test func notificationNameCapsuleDragStarted() async throws {
+        #expect(NSNotification.Name.capsuleDragStarted == NSNotification.Name("capsuleDragStarted"))
+    }
+
+    @Test func notificationNameCapsuleDragEnded() async throws {
+        #expect(NSNotification.Name.capsuleDragEnded == NSNotification.Name("capsuleDragEnded"))
+    }
+
+    @Test func notificationNameResetCapsulePosition() async throws {
+        #expect(NSNotification.Name.resetCapsulePosition == NSNotification.Name("resetCapsulePosition"))
+    }
 }
