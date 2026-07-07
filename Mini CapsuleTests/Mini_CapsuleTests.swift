@@ -44,7 +44,7 @@ struct SettingsStoreTests {
         #expect(store.hoverExpandDelay == 0.3)
         #expect(store.hoverCollapseDelay == 1.0)
         #expect(store.panelOpacityUnfocused == 0.6)
-        #expect(store.ringDiameter == 60)
+        #expect(store.ringDiameter == 30)
     }
 
     @Test func resetAllRestoresDefaults() async throws {
@@ -89,7 +89,7 @@ struct SettingsStoreTests {
         #expect(store.hoverExpandDelay == 0.3)
         #expect(store.hoverCollapseDelay == 1.0)
         #expect(store.panelOpacityUnfocused == 0.6)
-        #expect(store.ringDiameter == 60)
+        #expect(store.ringDiameter == 30)
     }
 
     @Test func settingsPersistAcrossStoreInstances() async throws {
@@ -151,7 +151,7 @@ struct SettingsStoreTests {
 
         #expect(store.historyMaxCount == 200)
         #expect(store.collapsedStyle == "capsule")
-        #expect(store.ringDiameter == 60)
+        #expect(store.ringDiameter == 30)
         #expect(store.panelOpacityUnfocused == 0.6)
         #expect(store.backgroundImageData == Data())
     }
@@ -188,7 +188,7 @@ struct SettingsStoreTests {
         #expect(store.hoverCollapseDelay == 1.0)
         #expect(store.panelOpacityUnfocused == 0.6)
         #expect(store.backgroundImageData == Data())
-        #expect(store.ringDiameter == 60)
+        #expect(store.ringDiameter == 30)
     }
 
     // MARK: - Notification Names
@@ -234,7 +234,7 @@ struct CapsuleWindowControllerTests {
         let container = try Self.makeContainer()
         let controller = CapsuleWindowController(modelContainer: container, settingsStore: SettingsStore())
 
-        #expect(controller.window?.contentView?.layer?.cornerRadius == 30)
+        #expect(controller.window?.contentView?.layer?.cornerRadius == 15)
     }
 
     @Test func updatesCornerRadiusOnExpandAndCollapse() async throws {
@@ -294,7 +294,7 @@ struct CapsuleWindowControllerTests {
 
         // Change style to dot while collapsed
         store.collapsedStyle = "dot"
-        #expect(controller.window?.contentView?.layer?.cornerRadius == 30)
+        #expect(controller.window?.contentView?.layer?.cornerRadius == 15)
     }
 
     @Test func doesNotUpdateCornerRadiusOnStyleChangeWhenExpanded() async throws {

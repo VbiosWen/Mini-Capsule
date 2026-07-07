@@ -234,7 +234,7 @@ final class SettingsStore: SettingsProtocol {
     var ringDiameter: Double {
         get {
             access(keyPath: \.ringDiameter)
-            return UserDefaults.standard.object(forKey: SettingsKey.ringDiameter.rawValue) as? Double ?? 60
+            return UserDefaults.standard.object(forKey: SettingsKey.ringDiameter.rawValue) as? Double ?? 30
         }
         set {
             withMutation(keyPath: \.ringDiameter) {
@@ -277,7 +277,7 @@ final class SettingsStore: SettingsProtocol {
         hoverCollapseDelay = 1.0
         panelOpacityUnfocused = 0.6
         backgroundImageData = Data()
-        ringDiameter = 60
+        ringDiameter = 30
         capsuleWindowFrame = Data()
     }
 

@@ -355,7 +355,7 @@ final class CapsuleWindowController: NSWindowController, NSWindowDelegate {
         let size: NSSize
         switch style {
         case "dot":
-            let diameter = UserDefaults.standard.object(forKey: SettingsKey.ringDiameter.rawValue) as? Double ?? 60
+            let diameter = UserDefaults.standard.object(forKey: SettingsKey.ringDiameter.rawValue) as? Double ?? 30
             size = NSSize(width: diameter, height: diameter)
         case "icon": size = Self.iconCollapsedSize
         default: size = Self.capsuleCollapsedSize
