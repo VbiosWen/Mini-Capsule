@@ -37,7 +37,7 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
-		FC9E13622FFABDA100C598E3 = {
+		FC9E13622FFABDA100C598E3 /* Exceptions for "Mini Capsule" folder in "Mini Capsule" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				Info.plist,
@@ -47,9 +47,24 @@
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
-		FC9E13412FFABDA000C598E3 /* Mini Capsule */ = {isa = PBXFileSystemSynchronizedRootGroup; exceptions = (FC9E13622FFABDA100C598E3, ); path = "Mini Capsule"; sourceTree = "<group>"; };
-		FC9E13532FFABDA100C598E3 /* Mini CapsuleTests */ = {isa = PBXFileSystemSynchronizedRootGroup; path = "Mini CapsuleTests"; sourceTree = "<group>"; };
-		FC9E135D2FFABDA100C598E3 /* Mini CapsuleUITests */ = {isa = PBXFileSystemSynchronizedRootGroup; path = "Mini CapsuleUITests"; sourceTree = "<group>"; };
+		FC9E13412FFABDA000C598E3 /* Mini Capsule */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				FC9E13622FFABDA100C598E3 /* Exceptions for "Mini Capsule" folder in "Mini Capsule" target */,
+			);
+			path = "Mini Capsule";
+			sourceTree = "<group>";
+		};
+		FC9E13532FFABDA100C598E3 /* Mini CapsuleTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = "Mini CapsuleTests";
+			sourceTree = "<group>";
+		};
+		FC9E135D2FFABDA100C598E3 /* Mini CapsuleUITests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = "Mini CapsuleUITests";
+			sourceTree = "<group>";
+		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
