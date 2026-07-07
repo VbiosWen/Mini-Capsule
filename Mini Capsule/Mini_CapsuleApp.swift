@@ -74,9 +74,9 @@ class CapsuleAppDelegate: NSObject, NSApplicationDelegate {
 
             let combo = self.shortcutString(from: event)
 
-            let showHide = UserDefaults.standard.string(forKey: "showHideShortcut") ?? "cmd+shift+V"
-            let quickPaste = UserDefaults.standard.string(forKey: "quickPasteShortcut") ?? "cmd+shift+C"
-            let togglePin = UserDefaults.standard.string(forKey: "togglePinShortcut") ?? ""
+            let showHide = self.settingsStore.showHideShortcut
+            let quickPaste = self.settingsStore.quickPasteShortcut
+            let togglePin = self.settingsStore.togglePinShortcut
 
             if combo == showHide {
                 self.capsuleWindowController?.toggleWindow()
