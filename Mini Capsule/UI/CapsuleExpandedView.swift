@@ -15,6 +15,7 @@ struct CapsuleExpandedView: View {
 
     @FocusState private var isSearchFocused: Bool
     @State private var selectedItemID: UUID?
+    @EnvironmentObject var settings: SettingsStore
 
     var body: some View {
         VStack(spacing: 0) {
@@ -89,8 +90,8 @@ struct CapsuleExpandedView: View {
         .background {
             ZStack {
                 // Background image (if set)
-                if let imageData = UserDefaults.standard.data(forKey: "backgroundImageData"),
-                   let nsImage = NSImage(data: imageData) {
+                if !settings.backgroundImageData.isEmpty,
+                   let nsImage = NSImage(data: settings.backgroundImageData) {
                     Image(nsImage: nsImage)
                         .resizable()
                         .aspectRatio(contentMode: .fill)
