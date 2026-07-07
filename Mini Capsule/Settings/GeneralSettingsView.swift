@@ -106,9 +106,11 @@ struct GeneralSettingsView: View {
     }
 
     static func resetCapsulePosition() {
-        UserDefaults.standard.removeObject(forKey: "CapsuleWindowFrame")
+        UserDefaults.standard.removeObject(forKey: capsuleWindowFrameKey)
         NotificationCenter.default.post(name: .resetCapsulePosition, object: nil)
     }
+
+    private static let capsuleWindowFrameKey = "CapsuleWindowFrame"
 
     private func ensureOneModeEnabled() {
         if !settings.showInMenuBar && !settings.showFloatingPanel {

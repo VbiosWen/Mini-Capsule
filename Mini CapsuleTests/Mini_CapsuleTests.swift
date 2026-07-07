@@ -230,7 +230,7 @@ struct CapsuleWindowControllerTests {
         defaults.set("capsule", forKey: "collapsedStyle")
 
         let container = try Self.makeContainer()
-        let controller = CapsuleWindowController(modelContainer: container)
+        let controller = CapsuleWindowController(modelContainer: container, settingsStore: SettingsStore())
 
         #expect(controller.window?.contentView?.layer?.cornerRadius == 18)
     }
@@ -240,7 +240,7 @@ struct CapsuleWindowControllerTests {
         defaults.set("dot", forKey: "collapsedStyle")
 
         let container = try Self.makeContainer()
-        let controller = CapsuleWindowController(modelContainer: container)
+        let controller = CapsuleWindowController(modelContainer: container, settingsStore: SettingsStore())
 
         #expect(controller.window?.contentView?.layer?.cornerRadius == 6)
     }
@@ -250,7 +250,7 @@ struct CapsuleWindowControllerTests {
         defaults.set("capsule", forKey: "collapsedStyle")
 
         let container = try Self.makeContainer()
-        let controller = CapsuleWindowController(modelContainer: container)
+        let controller = CapsuleWindowController(modelContainer: container, settingsStore: SettingsStore())
 
         // Initial: capsule style → cornerRadius 18
         #expect(controller.window?.contentView?.layer?.cornerRadius == 18)
@@ -277,7 +277,7 @@ struct CapsuleWindowControllerTests {
         defaults.set("capsule", forKey: "collapsedStyle")
 
         let container = try Self.makeContainer()
-        let controller = CapsuleWindowController(modelContainer: container)
+        let controller = CapsuleWindowController(modelContainer: container, settingsStore: SettingsStore())
 
         // Start collapsed as capsule → 18
         #expect(controller.window?.contentView?.layer?.cornerRadius == 18)
@@ -311,7 +311,7 @@ struct CapsuleWindowControllerTests {
         defaults.set("capsule", forKey: "collapsedStyle")
 
         let container = try Self.makeContainer()
-        let controller = CapsuleWindowController(modelContainer: container)
+        let controller = CapsuleWindowController(modelContainer: container, settingsStore: SettingsStore())
 
         // Expand
         NotificationCenter.default.post(
@@ -334,7 +334,7 @@ struct CapsuleWindowControllerTests {
 
     @Test func resetPositionRemovesSavedFrameKey() async throws {
         let container = try Self.makeContainer()
-        _ = CapsuleWindowController(modelContainer: container)
+        _ = CapsuleWindowController(modelContainer: container, settingsStore: SettingsStore())
 
         // Save a known frame position
         UserDefaults.standard.set([
@@ -349,7 +349,7 @@ struct CapsuleWindowControllerTests {
 
     @Test func resetPositionUpdatesWindowFrame() async throws {
         let container = try Self.makeContainer()
-        let controller = CapsuleWindowController(modelContainer: container)
+        let controller = CapsuleWindowController(modelContainer: container, settingsStore: SettingsStore())
         guard let window = controller.window else {
             Issue.record("No window")
             return
@@ -375,7 +375,7 @@ struct CapsuleWindowControllerTests {
 
     @Test func dragMonitorCreatedOnInit() async throws {
         let container = try Self.makeContainer()
-        let controller = CapsuleWindowController(modelContainer: container)
+        let controller = CapsuleWindowController(modelContainer: container, settingsStore: SettingsStore())
 
         #expect(controller.window != nil)
         #expect(controller.window?.contentView != nil)
@@ -386,7 +386,7 @@ struct CapsuleWindowControllerTests {
 
         autoreleasepool {
             let container = try! Self.makeContainer()
-            let controller = CapsuleWindowController(modelContainer: container)
+            let controller = CapsuleWindowController(modelContainer: container, settingsStore: SettingsStore())
             weakController = controller
         }
 
@@ -396,7 +396,7 @@ struct CapsuleWindowControllerTests {
 
     @Test func dragStartedNotificationPostedAfterDelay() async throws {
         let container = try Self.makeContainer()
-        let controller = CapsuleWindowController(modelContainer: container)
+        let controller = CapsuleWindowController(modelContainer: container, settingsStore: SettingsStore())
         guard let window = controller.window else {
             Issue.record("No window")
             return
@@ -429,7 +429,7 @@ struct CapsuleWindowControllerTests {
 
     @Test func dragEndedNotificationPostedOnMouseUp() async throws {
         let container = try Self.makeContainer()
-        let controller = CapsuleWindowController(modelContainer: container)
+        let controller = CapsuleWindowController(modelContainer: container, settingsStore: SettingsStore())
         guard let window = controller.window else {
             Issue.record("No window")
             return
@@ -465,7 +465,7 @@ struct CapsuleWindowControllerTests {
 
     @Test func dragStartedNotPostedWhenMouseUpBeforePrimer() async throws {
         let container = try Self.makeContainer()
-        let controller = CapsuleWindowController(modelContainer: container)
+        let controller = CapsuleWindowController(modelContainer: container, settingsStore: SettingsStore())
         guard let window = controller.window else {
             Issue.record("No window")
             return
@@ -496,6 +496,28 @@ struct CapsuleWindowControllerTests {
             NSApp.sendEvent(mouseUp)
             try await Task.sleep(for: .seconds(0.6))
         }
+    }
+}
+
+// MARK: - CapsuleView Settings Tests
+
+@MainActor
+struct CapsuleViewSettingsTests {
+    @Test func collapsedStyleReadsFromSettings() async throws {
+        let store = SettingsStore()
+        store.collapsedStyle = "dot"
+        store.hoverExpandDelay = 0.5
+        store.hoverCollapseDelay = 2.0
+        store.panelOpacityUnfocused = 0.5
+
+        #expect(store.collapsedStyle == "dot")
+        #expect(store.hoverExpandDelay == 0.5)
+        #expect(store.hoverCollapseDelay == 2.0)
+        #expect(store.panelOpacityUnfocused == 0.5)
+
+        store.resetAll()
+        #expect(store.collapsedStyle == "capsule")
+        #expect(store.hoverExpandDelay == 0.3)
     }
 }
 

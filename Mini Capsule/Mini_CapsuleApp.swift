@@ -37,7 +37,7 @@ class CapsuleAppDelegate: NSObject, NSApplicationDelegate {
         )
 
         // Create capsule window
-        let controller = CapsuleWindowController(modelContainer: Self.sharedModelContainer)
+        let controller = CapsuleWindowController(modelContainer: Self.sharedModelContainer, settingsStore: settingsStore)
         controller.showWindow()
         capsuleWindowController = controller
 

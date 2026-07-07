@@ -11,6 +11,7 @@ final class CapsulePanel: NSPanel {
 
 final class CapsuleWindowController: NSWindowController, NSWindowDelegate {
     private let modelContainer: ModelContainer
+    private let settingsStore: SettingsStore
     private var isExpanded = false
     private var observers: [NSObjectProtocol] = []
 
@@ -30,8 +31,9 @@ final class CapsuleWindowController: NSWindowController, NSWindowDelegate {
         return style == "dot" ? Self.dotCollapsedSize : Self.capsuleCollapsedSize
     }
 
-    init(modelContainer: ModelContainer) {
+    init(modelContainer: ModelContainer, settingsStore: SettingsStore) {
         self.modelContainer = modelContainer
+        self.settingsStore = settingsStore
 
         let savedFrame = Self.loadFrame()
 
@@ -61,6 +63,7 @@ final class CapsuleWindowController: NSWindowController, NSWindowDelegate {
         }
 
         let capsuleView = CapsuleView()
+            .environmentObject(settingsStore)
             .modelContainer(modelContainer)
 
         panel.contentView = NSHostingView(rootView: capsuleView)

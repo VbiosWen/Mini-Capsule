@@ -16,6 +16,8 @@ struct CapsuleView: View {
     // Drag state — driven by CapsuleWindowController NSEvent monitor
     @State private var isDragging = false
 
+    @EnvironmentObject var settings: SettingsStore
+
     var body: some View {
         Group {
             if isExpanded {
@@ -40,7 +42,7 @@ struct CapsuleView: View {
                 CapsuleCollapsedView(
                     latestItem: items.first,
                     isCapturing: isCapturing,
-                    collapsedStyle: UserDefaults.standard.string(forKey: "collapsedStyle") ?? "capsule"
+                    collapsedStyle: settings.collapsedStyle
                 )
             }
         }
@@ -65,8 +67,7 @@ struct CapsuleView: View {
                     }
                 }
                 hoverWorkItem = workItem
-                let expandDelay = UserDefaults.standard.double(forKey: "hoverExpandDelay")
-                let effectiveExpandDelay = expandDelay > 0 ? expandDelay : 0.3
+                let effectiveExpandDelay = settings.hoverExpandDelay
                 DispatchQueue.main.asyncAfter(deadline: .now() + effectiveExpandDelay, execute: workItem)
             } else {
                 isExpandedReady = false
@@ -77,8 +78,7 @@ struct CapsuleView: View {
                     postExpandedNotification()
                 }
                 hoverWorkItem = workItem
-                let collapseDelay = UserDefaults.standard.double(forKey: "hoverCollapseDelay")
-                let effectiveCollapseDelay = collapseDelay > 0 ? collapseDelay : 1.0
+                let effectiveCollapseDelay = settings.hoverCollapseDelay
                 DispatchQueue.main.asyncAfter(deadline: .now() + effectiveCollapseDelay, execute: workItem)
             }
         }
@@ -103,8 +103,7 @@ struct CapsuleView: View {
     }
 
     private var windowOpacity: Double {
-        let unfocusedOpacity = UserDefaults.standard.double(forKey: "panelOpacityUnfocused")
-        let effectiveUnfocused = unfocusedOpacity > 0 ? unfocusedOpacity : 0.6
+        let effectiveUnfocused = settings.panelOpacityUnfocused
         // If expanded (hovering), fully opaque. Otherwise use unfocused setting.
         return isExpanded ? 1.0 : effectiveUnfocused
     }
