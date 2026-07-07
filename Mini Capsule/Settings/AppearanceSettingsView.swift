@@ -65,17 +65,21 @@ struct AppearanceSettingsView: View {
             }
 
             Section {
-                LabeledContent("圆环直径") {
+                LabeledContent("圆环大小") {
                     HStack(spacing: 8) {
-                        Slider(value: Bindable(settings).ringDiameter, in: 20...120, step: 2)
+                        Slider(value: Bindable(settings).ringDiameter, in: 20...200, step: 1)
                             .frame(width: 150)
-                        Text("\(Int(settings.ringDiameter)) px")
+                        Text("\(Int(settings.ringDiameter))px")
                             .foregroundColor(.secondary)
                             .frame(width: 40, alignment: .trailing)
                     }
                 }
             } header: {
                 Text("圆环")
+            } footer: {
+                Text("圆环模式下的彩虹圆环直径，范围 20–200px。")
+                    .font(.system(size: 11))
+                    .foregroundColor(.secondary)
             }
         }
         .formStyle(.grouped)
