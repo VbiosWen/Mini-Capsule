@@ -1,120 +1,51 @@
 // Mini Capsule/UI/CapsuleView.swift
 import SwiftUI
 import SwiftData
-import AppKit
 
 struct CapsuleView: View {
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \ClipItem.timestamp, order: .reverse) private var items: [ClipItem]
 
-    @State private var isExpanded = false
-    @State private var isCapturing = false
-    @State private var searchText = ""
-    @State private var hoverWorkItem: DispatchWorkItem?
-    @State private var isExpandedReady = false
+    @State private var capsuleVM: CapsuleViewModel
+    @State private var listVM: ClipboardListViewModel
+    @Environment(SettingsStore.self) private var settings
 
-    // Drag state — driven by CapsuleWindowController NSEvent monitor
-    @State private var isDragging = false
-
-    @Environment(SettingsStore.self) var settings
+    init(modelContext: ModelContext, settings: SettingsStore) {
+        let capsuleVM = CapsuleViewModel(settings: settings)
+        let listVM = ClipboardListViewModel(modelContext: modelContext, settings: settings)
+        _capsuleVM = State(initialValue: capsuleVM)
+        _listVM = State(initialValue: listVM)
+    }
 
     var body: some View {
         Group {
-            if isExpanded {
-                CapsuleExpandedView(
-                    searchText: $searchText,
-                    isExpandedReady: isExpandedReady,
-                    onItemTap: { item in
-                        PasteService.copyToClipboard(item)
-                        item.pasteCount += 1
-                        item.lastPastedAt = Date()
-                        item.timestamp = Date()
-                        try? modelContext.save()
-                    },
-                    onItemDelete: { item in
-                        withAnimation {
-                            modelContext.delete(item)
-                            try? modelContext.save()
-                        }
-                    }
-                )
+            if capsuleVM.isExpanded {
+                CapsuleExpandedView(viewModel: listVM, capsuleViewModel: capsuleVM)
             } else {
                 CapsuleCollapsedView(
                     latestItem: items.first,
-                    isCapturing: isCapturing,
+                    isCapturing: capsuleVM.isCapturing,
                     collapsedStyle: settings.collapsedStyle
                 )
             }
         }
-        .opacity(windowOpacity)
-        .animation(.easeInOut(duration: 0.3), value: windowOpacity)
+        .opacity(capsuleVM.windowOpacity)
+        .animation(.easeInOut(duration: 0.3), value: capsuleVM.windowOpacity)
         .onHover { hovering in
-            hoverWorkItem?.cancel()
-
-            // Don't expand/collapse while a drag is in progress
-            if isDragging { return }
-
             if hovering {
-                isExpandedReady = false
-                let workItem = DispatchWorkItem {
-                    withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
-                        isExpanded = true
-                        searchText = ""
-                    }
-                    postExpandedNotification()
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
-                        isExpandedReady = true
-                    }
-                }
-                hoverWorkItem = workItem
-                let effectiveExpandDelay = settings.hoverExpandDelay > 0 ? settings.hoverExpandDelay : 0.3
-                DispatchQueue.main.asyncAfter(deadline: .now() + effectiveExpandDelay, execute: workItem)
+                capsuleVM.onHoverEnter()
             } else {
-                isExpandedReady = false
-                let workItem = DispatchWorkItem {
-                    withAnimation(.spring(response: 0.25, dampingFraction: 0.8)) {
-                        isExpanded = false
-                    }
-                    postExpandedNotification()
-                }
-                hoverWorkItem = workItem
-                let effectiveCollapseDelay = settings.hoverCollapseDelay > 0 ? settings.hoverCollapseDelay : 1.0
-                DispatchQueue.main.asyncAfter(deadline: .now() + effectiveCollapseDelay, execute: workItem)
+                capsuleVM.onHoverExit()
             }
         }
         .onReceive(NotificationCenter.default.publisher(for: .capsuleDragStarted)) { _ in
-            isDragging = true
-            if isExpanded {
-                withAnimation(.spring(response: 0.25, dampingFraction: 0.8)) {
-                    isExpanded = false
-                }
-                postExpandedNotification()
-            }
+            capsuleVM.onDragStart()
         }
         .onReceive(NotificationCenter.default.publisher(for: .capsuleDragEnded)) { _ in
-            isDragging = false
+            capsuleVM.onDragEnd()
         }
         .onChange(of: items.first?.id) { _, _ in
-            isCapturing = true
-            DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
-                isCapturing = false
-            }
-        }
-    }
-
-    private var windowOpacity: Double {
-        let effectiveUnfocused = settings.panelOpacityUnfocused > 0 ? settings.panelOpacityUnfocused : 0.6
-        // If expanded (hovering), fully opaque. Otherwise use unfocused setting.
-        return isExpanded ? 1.0 : effectiveUnfocused
-    }
-
-    private func postExpandedNotification() {
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
-            NotificationCenter.default.post(
-                name: .capsuleDidChangeExpanded,
-                object: nil,
-                userInfo: ["isExpanded": isExpanded]
-            )
+            capsuleVM.onNewItemCaptured()
         }
     }
 }

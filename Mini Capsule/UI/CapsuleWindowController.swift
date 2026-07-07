@@ -60,9 +60,12 @@ final class CapsuleWindowController: NSWindowController, NSWindowDelegate {
             window.delegate = self
         }
 
-        let capsuleView = CapsuleView()
-            .environment(settingsStore)
-            .modelContainer(modelContainer)
+        let capsuleView = CapsuleView(
+            modelContext: modelContainer.mainContext,
+            settings: settingsStore
+        )
+        .modelContainer(modelContainer)
+        .environment(settingsStore)
 
         panel.contentView = NSHostingView(rootView: capsuleView)
         panel.contentView?.wantsLayer = true
