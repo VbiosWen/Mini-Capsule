@@ -252,6 +252,47 @@ struct CapsuleWindowControllerTests {
         #expect(controller.window?.contentView?.layer?.cornerRadius == 12)
     }
 
+        // MARK: - Reset Position Tests
+
+    @Test func resetPositionRemovesSavedFrameKey() async throws {
+        let container = try Self.makeContainer()
+        _ = CapsuleWindowController(modelContainer: container)
+
+        // Save a known frame position
+        UserDefaults.standard.set([
+            "x": CGFloat(100), "y": CGFloat(200),
+            "w": CGFloat(200), "h": CGFloat(36)
+        ], forKey: "CapsuleWindowFrame")
+
+        NotificationCenter.default.post(name: .resetCapsulePosition, object: nil)
+
+        #expect(UserDefaults.standard.dictionary(forKey: "CapsuleWindowFrame") == nil)
+    }
+
+    @Test func resetPositionUpdatesWindowFrame() async throws {
+        let container = try Self.makeContainer()
+        let controller = CapsuleWindowController(modelContainer: container)
+        guard let window = controller.window else {
+            Issue.record("No window")
+            return
+        }
+
+        // Save a frame and move window away from default
+        UserDefaults.standard.set([
+            "x": CGFloat(100), "y": CGFloat(200),
+            "w": CGFloat(200), "h": CGFloat(36)
+        ], forKey: "CapsuleWindowFrame")
+        let oldFrame = NSRect(x: 100, y: 200, width: 200, height: 36)
+        window.setFrame(oldFrame, display: false)
+
+        NotificationCenter.default.post(name: .resetCapsulePosition, object: nil)
+
+        // If a screen is available, the window origin must have moved
+        if NSScreen.main != nil {
+            #expect(window.frame.origin.x != 100 || window.frame.origin.y != 200)
+        }
+    }
+
     // MARK: - Drag Monitor Tests
 
     @Test func dragMonitorCreatedOnInit() async throws {

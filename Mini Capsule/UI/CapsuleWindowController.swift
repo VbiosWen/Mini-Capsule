@@ -223,6 +223,31 @@ final class CapsuleWindowController: NSWindowController, NSWindowDelegate {
             }
         )
 
+        // Listen for reset position request
+        observers.append(
+            NotificationCenter.default.addObserver(
+                forName: .resetCapsulePosition,
+                object: nil,
+                queue: .main
+            ) { [weak self] _ in
+                guard let self = self,
+                      let window = self.window,
+                      let screen = NSScreen.main else { return }
+
+                let style = UserDefaults.standard.string(forKey: "collapsedStyle") ?? "capsule"
+                let size = style == "dot" ? Self.dotCollapsedSize : Self.capsuleCollapsedSize
+                let screenWidth = screen.visibleFrame.width
+                let screenHeight = screen.visibleFrame.maxY
+
+                let x = (screenWidth - size.width) / 2
+                let y = screenHeight - size.height - 40
+                let newFrame = NSRect(x: x, y: y, width: size.width, height: size.height)
+
+                window.setFrame(newFrame, display: true, animate: true)
+                UserDefaults.standard.removeObject(forKey: Self.frameKey)
+            }
+        )
+
         // Listen for show floating panel toggle
         observers.append(
             NotificationCenter.default.addObserver(
