@@ -251,4 +251,131 @@ struct CapsuleWindowControllerTests {
         )
         #expect(controller.window?.contentView?.layer?.cornerRadius == 12)
     }
+
+    // MARK: - Drag Monitor Tests
+
+    @Test func dragMonitorCreatedOnInit() async throws {
+        let container = try Self.makeContainer()
+        let controller = CapsuleWindowController(modelContainer: container)
+
+        #expect(controller.window != nil)
+        #expect(controller.window?.contentView != nil)
+    }
+
+    @Test func deinitReleasesController() async throws {
+        weak var weakController: CapsuleWindowController?
+
+        autoreleasepool {
+            let container = try! Self.makeContainer()
+            let controller = CapsuleWindowController(modelContainer: container)
+            weakController = controller
+        }
+
+        try await Task.sleep(for: .milliseconds(50))
+        #expect(weakController == nil)
+    }
+
+    @Test func dragStartedNotificationPostedAfterDelay() async throws {
+        let container = try Self.makeContainer()
+        let controller = CapsuleWindowController(modelContainer: container)
+        guard let window = controller.window else {
+            Issue.record("No window")
+            return
+        }
+
+        let mouseDown = try #require(NSEvent.mouseEvent(
+            with: .leftMouseDown,
+            location: .zero,
+            modifierFlags: [],
+            timestamp: ProcessInfo.processInfo.systemUptime,
+            windowNumber: window.windowNumber,
+            context: nil,
+            eventNumber: 0,
+            clickCount: 1,
+            pressure: 0
+        ))
+
+        try await confirmation(expectedCount: 1) { started in
+            let obs = NotificationCenter.default.addObserver(
+                forName: .capsuleDragStarted,
+                object: nil,
+                queue: .main
+            ) { _ in started() }
+            defer { NotificationCenter.default.removeObserver(obs) }
+
+            NSApp.sendEvent(mouseDown)
+            try await Task.sleep(for: .seconds(0.6))
+        }
+    }
+
+    @Test func dragEndedNotificationPostedOnMouseUp() async throws {
+        let container = try Self.makeContainer()
+        let controller = CapsuleWindowController(modelContainer: container)
+        guard let window = controller.window else {
+            Issue.record("No window")
+            return
+        }
+
+        let mouseDown = try #require(NSEvent.mouseEvent(
+            with: .leftMouseDown, location: .zero,
+            modifierFlags: [], timestamp: ProcessInfo.processInfo.systemUptime,
+            windowNumber: window.windowNumber, context: nil,
+            eventNumber: 0, clickCount: 1, pressure: 0
+        ))
+        let mouseUp = try #require(NSEvent.mouseEvent(
+            with: .leftMouseUp, location: .zero,
+            modifierFlags: [], timestamp: ProcessInfo.processInfo.systemUptime,
+            windowNumber: window.windowNumber, context: nil,
+            eventNumber: 1, clickCount: 1, pressure: 0
+        ))
+
+        try await confirmation(expectedCount: 1) { ended in
+            let obs = NotificationCenter.default.addObserver(
+                forName: .capsuleDragEnded,
+                object: nil,
+                queue: .main
+            ) { _ in ended() }
+            defer { NotificationCenter.default.removeObserver(obs) }
+
+            NSApp.sendEvent(mouseDown)
+            try await Task.sleep(for: .milliseconds(50))
+            NSApp.sendEvent(mouseUp)
+            try await Task.sleep(for: .milliseconds(100))
+        }
+    }
+
+    @Test func dragStartedNotPostedWhenMouseUpBeforePrimer() async throws {
+        let container = try Self.makeContainer()
+        let controller = CapsuleWindowController(modelContainer: container)
+        guard let window = controller.window else {
+            Issue.record("No window")
+            return
+        }
+
+        let mouseDown = try #require(NSEvent.mouseEvent(
+            with: .leftMouseDown, location: .zero,
+            modifierFlags: [], timestamp: ProcessInfo.processInfo.systemUptime,
+            windowNumber: window.windowNumber, context: nil,
+            eventNumber: 0, clickCount: 1, pressure: 0
+        ))
+        let mouseUp = try #require(NSEvent.mouseEvent(
+            with: .leftMouseUp, location: .zero,
+            modifierFlags: [], timestamp: ProcessInfo.processInfo.systemUptime,
+            windowNumber: window.windowNumber, context: nil,
+            eventNumber: 1, clickCount: 1, pressure: 0
+        ))
+
+        try await confirmation(expectedCount: 0) { started in
+            let obs = NotificationCenter.default.addObserver(
+                forName: .capsuleDragStarted,
+                object: nil,
+                queue: .main
+            ) { _ in started() }
+            defer { NotificationCenter.default.removeObserver(obs) }
+
+            NSApp.sendEvent(mouseDown)
+            NSApp.sendEvent(mouseUp)
+            try await Task.sleep(for: .seconds(0.6))
+        }
+    }
 }

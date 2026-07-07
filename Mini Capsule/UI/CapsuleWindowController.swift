@@ -14,6 +14,12 @@ final class CapsuleWindowController: NSWindowController, NSWindowDelegate {
     private var isExpanded = false
     private var observers: [NSObjectProtocol] = []
 
+    // Drag monitoring
+    private var dragMonitor: Any?
+    private var dragPrimer: DispatchWorkItem?
+    private var isDragActive = false
+    private var previousDragLocation: NSPoint?
+
     private static let frameKey = "CapsuleWindowFrame"
     private static let capsuleCollapsedSize = NSSize(width: 200, height: 36)
     private static let dotCollapsedSize = NSSize(width: 12, height: 12)
@@ -65,6 +71,13 @@ final class CapsuleWindowController: NSWindowController, NSWindowDelegate {
         panel.contentView?.layer?.cornerRadius = initialStyle == "dot" ? 6 : 18
 
         observeExpandedState()
+        startDragMonitoring()
+    }
+
+    deinit {
+        if let monitor = dragMonitor {
+            NSEvent.removeMonitor(monitor)
+        }
     }
 
     required init?(coder: NSCoder) {
@@ -81,6 +94,59 @@ final class CapsuleWindowController: NSWindowController, NSWindowDelegate {
             window.orderOut(nil)
         } else {
             window.makeKeyAndOrderFront(nil)
+        }
+    }
+
+    private func startDragMonitoring() {
+        dragMonitor = NSEvent.addLocalMonitorForEvents(
+            matching: [.leftMouseDown, .leftMouseDragged, .leftMouseUp]
+        ) { [weak self] event in
+            guard let self = self, event.window == self.window else { return event }
+
+            switch event.type {
+            case .leftMouseDown:
+                self.previousDragLocation = event.locationInWindow
+                self.isDragActive = false
+
+                let primer = DispatchWorkItem {
+                    self.isDragActive = true
+                    NotificationCenter.default.post(
+                        name: .capsuleDragStarted,
+                        object: nil
+                    )
+                }
+                self.dragPrimer = primer
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5, execute: primer)
+                return event
+
+            case .leftMouseDragged:
+                let current = event.locationInWindow
+                if self.isDragActive, let prev = self.previousDragLocation {
+                    let dx = current.x - prev.x
+                    let dy = current.y - prev.y
+                    var origin = self.window?.frame.origin ?? .zero
+                    origin.x += dx
+                    origin.y -= dy
+                    self.window?.setFrameOrigin(origin)
+                }
+                self.previousDragLocation = current
+                return self.isDragActive ? nil : event
+
+            case .leftMouseUp:
+                self.dragPrimer?.cancel()
+                self.dragPrimer = nil
+                self.isDragActive = false
+                self.previousDragLocation = nil
+                self.saveFrame()
+                NotificationCenter.default.post(
+                    name: .capsuleDragEnded,
+                    object: nil
+                )
+                return event
+
+            default:
+                return event
+            }
         }
     }
 
