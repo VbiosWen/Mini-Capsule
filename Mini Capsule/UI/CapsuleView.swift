@@ -36,7 +36,10 @@ struct CapsuleView: View {
         .animation(.easeInOut(duration: 0.3), value: capsuleVM.windowOpacity)
         .onHover { hovering in
             if hovering {
-                capsuleVM.onHoverEnter()
+                // Don't expand while mouse button is pressed — that's a drag intent
+                if NSEvent.pressedMouseButtons == 0 {
+                    capsuleVM.onHoverEnter()
+                }
             } else {
                 // Don't collapse while user is interacting with the capsule panel
                 if capsuleVM.isExpanded, NSApp.keyWindow is CapsulePanel { return }
