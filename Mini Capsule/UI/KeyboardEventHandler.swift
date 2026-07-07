@@ -1,5 +1,6 @@
 // Mini Capsule/UI/KeyboardEventHandler.swift
 import SwiftUI
+import AppKit
 
 /// Independent NSViewRepresentable that bridges NSEvent keyDown to
 /// ClipboardListViewModel keyboard navigation methods.
@@ -37,6 +38,13 @@ struct KeyboardEventHandler: NSViewRepresentable {
 
         func handleKeyEvent(_ event: NSEvent) -> Bool {
             guard let vm = viewModel, !vm.filteredItems.isEmpty else { return false }
+
+            // Don't intercept keys when a text input view is focused (search bar, popover editor, etc.)
+            if let fr = NSApp.keyWindow?.firstResponder as? NSView {
+                if fr is NSTextView || fr is NSTextField {
+                    return false
+                }
+            }
 
             // Check for Cmd+A first (select all)
             if event.modifierFlags.contains(.command),

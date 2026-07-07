@@ -71,12 +71,12 @@ struct ClipItemRow: View {
             } else {
                 hoverTask?.cancel()
                 isHovering = false
-                // Delay dismissal so the mouse has time to reach the popover
+                // Delay popover dismissal so the mouse has time to reach the popover.
+                // Don't dismiss the editor — it has its own dismiss buttons.
                 hoverTask = Task {
                     try? await Task.sleep(for: .milliseconds(500))
                     guard !Task.isCancelled else { return }
                     showPopover = false
-                    showEditor = false
                 }
             }
         }
