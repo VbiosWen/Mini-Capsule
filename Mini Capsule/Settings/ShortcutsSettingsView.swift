@@ -58,23 +58,23 @@ final class ShortcutCaptureManager: ObservableObject {
 // MARK: - Settings View
 
 struct ShortcutsSettingsView: View {
-    @EnvironmentObject var settings: SettingsStore
+    @Environment(SettingsStore.self) var settings
     var body: some View {
         Form {
             Section {
                 ShortcutRowView(
                     label: "显示/隐藏胶囊",
-                    shortcut: $settings.showHideShortcut,
+                    shortcut: Bindable(settings).showHideShortcut,
                     otherShortcuts: [settings.quickPasteShortcut, settings.togglePinShortcut]
                 )
                 ShortcutRowView(
                     label: "快速粘贴上一条",
-                    shortcut: $settings.quickPasteShortcut,
+                    shortcut: Bindable(settings).quickPasteShortcut,
                     otherShortcuts: [settings.showHideShortcut, settings.togglePinShortcut]
                 )
                 ShortcutRowView(
                     label: "切换置顶",
-                    shortcut: $settings.togglePinShortcut,
+                    shortcut: Bindable(settings).togglePinShortcut,
                     otherShortcuts: [settings.showHideShortcut, settings.quickPasteShortcut]
                 )
             } header: {

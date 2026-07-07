@@ -6,7 +6,7 @@ struct CapsuleCollapsedView: View {
     let isCapturing: Bool
     let collapsedStyle: String
 
-    @EnvironmentObject var settings: SettingsStore
+    @Environment(SettingsStore.self) var settings
 
     var body: some View {
         if collapsedStyle == "dot" {

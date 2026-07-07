@@ -169,7 +169,7 @@ struct Mini_CapsuleApp: App {
                     .tabItem { Label("高级", systemImage: "ellipsis.curlybraces") }
             }
         }
-        .environmentObject(appDelegate.settingsStore)
+        .environment(appDelegate.settingsStore)
         .modelContainer(CapsuleAppDelegate.sharedModelContainer)
         #else
         // iOS / visionOS: keep existing behavior

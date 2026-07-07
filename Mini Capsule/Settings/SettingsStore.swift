@@ -2,7 +2,7 @@
 import SwiftUI
 import SwiftData
 import Foundation
-import Combine
+import Observation
 
 /// Export/import DTO for ClipItem serialization.
 private struct ClipItemExport: Codable {
@@ -15,76 +15,259 @@ private struct ClipItemExport: Codable {
 }
 
 @MainActor
-final class SettingsStore: ObservableObject, SettingsProtocol {
+@Observable
+final class SettingsStore: SettingsProtocol {
     // MARK: - Clipboard
 
-    @AppStorage(SettingsKey.historyMaxCount.rawValue)
-    var historyMaxCount: Int = 200 { didSet { objectWillChange.send() } }
+    var historyMaxCount: Int {
+        get {
+            access(keyPath: \.historyMaxCount)
+            return UserDefaults.standard.object(forKey: SettingsKey.historyMaxCount.rawValue) as? Int ?? 200
+        }
+        set {
+            withMutation(keyPath: \.historyMaxCount) {
+                UserDefaults.standard.set(newValue, forKey: SettingsKey.historyMaxCount.rawValue)
+            }
+        }
+    }
 
-    @AppStorage(SettingsKey.imageMaxSizeMB.rawValue)
-    var imageMaxSizeMB: Int = 2 { didSet { objectWillChange.send() } }
+    var imageMaxSizeMB: Int {
+        get {
+            access(keyPath: \.imageMaxSizeMB)
+            return UserDefaults.standard.object(forKey: SettingsKey.imageMaxSizeMB.rawValue) as? Int ?? 2
+        }
+        set {
+            withMutation(keyPath: \.imageMaxSizeMB) {
+                UserDefaults.standard.set(newValue, forKey: SettingsKey.imageMaxSizeMB.rawValue)
+            }
+        }
+    }
 
-    @AppStorage(SettingsKey.pollingInterval.rawValue)
-    var pollingInterval: Double = 0.5 { didSet { objectWillChange.send() } }
+    var pollingInterval: Double {
+        get {
+            access(keyPath: \.pollingInterval)
+            return UserDefaults.standard.object(forKey: SettingsKey.pollingInterval.rawValue) as? Double ?? 0.5
+        }
+        set {
+            withMutation(keyPath: \.pollingInterval) {
+                UserDefaults.standard.set(newValue, forKey: SettingsKey.pollingInterval.rawValue)
+            }
+        }
+    }
 
-    @AppStorage(SettingsKey.cleanupOnStartup.rawValue)
-    var cleanupOnStartup: Bool = true { didSet { objectWillChange.send() } }
+    var cleanupOnStartup: Bool {
+        get {
+            access(keyPath: \.cleanupOnStartup)
+            return UserDefaults.standard.object(forKey: SettingsKey.cleanupOnStartup.rawValue) as? Bool ?? true
+        }
+        set {
+            withMutation(keyPath: \.cleanupOnStartup) {
+                UserDefaults.standard.set(newValue, forKey: SettingsKey.cleanupOnStartup.rawValue)
+            }
+        }
+    }
 
-    @AppStorage(SettingsKey.dedupEnabled.rawValue)
-    var dedupEnabled: Bool = true { didSet { objectWillChange.send() } }
+    var dedupEnabled: Bool {
+        get {
+            access(keyPath: \.dedupEnabled)
+            return UserDefaults.standard.object(forKey: SettingsKey.dedupEnabled.rawValue) as? Bool ?? true
+        }
+        set {
+            withMutation(keyPath: \.dedupEnabled) {
+                UserDefaults.standard.set(newValue, forKey: SettingsKey.dedupEnabled.rawValue)
+            }
+        }
+    }
 
     // MARK: - Shortcuts
 
-    @AppStorage(SettingsKey.showHideShortcut.rawValue)
-    var showHideShortcut: String = "cmd+shift+V" { didSet { objectWillChange.send() } }
+    var showHideShortcut: String {
+        get {
+            access(keyPath: \.showHideShortcut)
+            return UserDefaults.standard.string(forKey: SettingsKey.showHideShortcut.rawValue) ?? "cmd+shift+V"
+        }
+        set {
+            withMutation(keyPath: \.showHideShortcut) {
+                UserDefaults.standard.set(newValue, forKey: SettingsKey.showHideShortcut.rawValue)
+            }
+        }
+    }
 
-    @AppStorage(SettingsKey.quickPasteShortcut.rawValue)
-    var quickPasteShortcut: String = "cmd+shift+C" { didSet { objectWillChange.send() } }
+    var quickPasteShortcut: String {
+        get {
+            access(keyPath: \.quickPasteShortcut)
+            return UserDefaults.standard.string(forKey: SettingsKey.quickPasteShortcut.rawValue) ?? "cmd+shift+C"
+        }
+        set {
+            withMutation(keyPath: \.quickPasteShortcut) {
+                UserDefaults.standard.set(newValue, forKey: SettingsKey.quickPasteShortcut.rawValue)
+            }
+        }
+    }
 
-    @AppStorage(SettingsKey.togglePinShortcut.rawValue)
-    var togglePinShortcut: String = "" { didSet { objectWillChange.send() } }
+    var togglePinShortcut: String {
+        get {
+            access(keyPath: \.togglePinShortcut)
+            return UserDefaults.standard.string(forKey: SettingsKey.togglePinShortcut.rawValue) ?? ""
+        }
+        set {
+            withMutation(keyPath: \.togglePinShortcut) {
+                UserDefaults.standard.set(newValue, forKey: SettingsKey.togglePinShortcut.rawValue)
+            }
+        }
+    }
 
     // MARK: - Advanced
 
-    @AppStorage(SettingsKey.iCloudSyncEnabled.rawValue)
-    var iCloudSyncEnabled: Bool = false { didSet { objectWillChange.send() } }
+    var iCloudSyncEnabled: Bool {
+        get {
+            access(keyPath: \.iCloudSyncEnabled)
+            return UserDefaults.standard.object(forKey: SettingsKey.iCloudSyncEnabled.rawValue) as? Bool ?? false
+        }
+        set {
+            withMutation(keyPath: \.iCloudSyncEnabled) {
+                UserDefaults.standard.set(newValue, forKey: SettingsKey.iCloudSyncEnabled.rawValue)
+            }
+        }
+    }
 
     // MARK: - General
 
-    @AppStorage(SettingsKey.launchAtLogin.rawValue)
-    var launchAtLogin: Bool = false { didSet { objectWillChange.send() } }
+    var launchAtLogin: Bool {
+        get {
+            access(keyPath: \.launchAtLogin)
+            return UserDefaults.standard.object(forKey: SettingsKey.launchAtLogin.rawValue) as? Bool ?? false
+        }
+        set {
+            withMutation(keyPath: \.launchAtLogin) {
+                UserDefaults.standard.set(newValue, forKey: SettingsKey.launchAtLogin.rawValue)
+            }
+        }
+    }
 
-    @AppStorage(SettingsKey.showInMenuBar.rawValue)
-    var showInMenuBar: Bool = true { didSet { objectWillChange.send() } }
+    var showInMenuBar: Bool {
+        get {
+            access(keyPath: \.showInMenuBar)
+            return UserDefaults.standard.object(forKey: SettingsKey.showInMenuBar.rawValue) as? Bool ?? true
+        }
+        set {
+            withMutation(keyPath: \.showInMenuBar) {
+                UserDefaults.standard.set(newValue, forKey: SettingsKey.showInMenuBar.rawValue)
+            }
+        }
+    }
 
-    @AppStorage(SettingsKey.showFloatingPanel.rawValue)
-    var showFloatingPanel: Bool = true { didSet { objectWillChange.send() } }
+    var showFloatingPanel: Bool {
+        get {
+            access(keyPath: \.showFloatingPanel)
+            return UserDefaults.standard.object(forKey: SettingsKey.showFloatingPanel.rawValue) as? Bool ?? true
+        }
+        set {
+            withMutation(keyPath: \.showFloatingPanel) {
+                UserDefaults.standard.set(newValue, forKey: SettingsKey.showFloatingPanel.rawValue)
+            }
+        }
+    }
 
-    @AppStorage(SettingsKey.collapsedStyle.rawValue)
-    var collapsedStyle: String = "capsule" { didSet { objectWillChange.send() } }
+    var collapsedStyle: String {
+        get {
+            access(keyPath: \.collapsedStyle)
+            return UserDefaults.standard.string(forKey: SettingsKey.collapsedStyle.rawValue) ?? "capsule"
+        }
+        set {
+            withMutation(keyPath: \.collapsedStyle) {
+                UserDefaults.standard.set(newValue, forKey: SettingsKey.collapsedStyle.rawValue)
+            }
+        }
+    }
 
-    @AppStorage(SettingsKey.hoverExpandDelay.rawValue)
-    var hoverExpandDelay: Double = 0.3 { didSet { objectWillChange.send() } }
+    var hoverExpandDelay: Double {
+        get {
+            access(keyPath: \.hoverExpandDelay)
+            return UserDefaults.standard.object(forKey: SettingsKey.hoverExpandDelay.rawValue) as? Double ?? 0.3
+        }
+        set {
+            withMutation(keyPath: \.hoverExpandDelay) {
+                UserDefaults.standard.set(newValue, forKey: SettingsKey.hoverExpandDelay.rawValue)
+            }
+        }
+    }
 
-    @AppStorage(SettingsKey.hoverCollapseDelay.rawValue)
-    var hoverCollapseDelay: Double = 1.0 { didSet { objectWillChange.send() } }
+    var hoverCollapseDelay: Double {
+        get {
+            access(keyPath: \.hoverCollapseDelay)
+            return UserDefaults.standard.object(forKey: SettingsKey.hoverCollapseDelay.rawValue) as? Double ?? 1.0
+        }
+        set {
+            withMutation(keyPath: \.hoverCollapseDelay) {
+                UserDefaults.standard.set(newValue, forKey: SettingsKey.hoverCollapseDelay.rawValue)
+            }
+        }
+    }
 
     // MARK: - Appearance
 
-    @AppStorage(SettingsKey.panelOpacityUnfocused.rawValue)
-    var panelOpacityUnfocused: Double = 0.6 { didSet { objectWillChange.send() } }
+    var panelOpacityUnfocused: Double {
+        get {
+            access(keyPath: \.panelOpacityUnfocused)
+            return UserDefaults.standard.object(forKey: SettingsKey.panelOpacityUnfocused.rawValue) as? Double ?? 0.6
+        }
+        set {
+            withMutation(keyPath: \.panelOpacityUnfocused) {
+                UserDefaults.standard.set(newValue, forKey: SettingsKey.panelOpacityUnfocused.rawValue)
+            }
+        }
+    }
 
-    @AppStorage(SettingsKey.backgroundImageData.rawValue)
-    var backgroundImageData: Data = Data() { didSet { objectWillChange.send() } }
+    var backgroundImageData: Data {
+        get {
+            access(keyPath: \.backgroundImageData)
+            return UserDefaults.standard.data(forKey: SettingsKey.backgroundImageData.rawValue) ?? Data()
+        }
+        set {
+            withMutation(keyPath: \.backgroundImageData) {
+                UserDefaults.standard.set(newValue, forKey: SettingsKey.backgroundImageData.rawValue)
+            }
+        }
+    }
 
-    @AppStorage(SettingsKey.dotColorMode.rawValue)
-    var dotColorMode: String = "auto" { didSet { objectWillChange.send() } }
+    var dotColorMode: String {
+        get {
+            access(keyPath: \.dotColorMode)
+            return UserDefaults.standard.string(forKey: SettingsKey.dotColorMode.rawValue) ?? "auto"
+        }
+        set {
+            withMutation(keyPath: \.dotColorMode) {
+                UserDefaults.standard.set(newValue, forKey: SettingsKey.dotColorMode.rawValue)
+            }
+        }
+    }
 
-    @AppStorage(SettingsKey.dotCustomColor.rawValue)
-    var dotCustomColor: String = "#007AFF" { didSet { objectWillChange.send() } }
+    var dotCustomColor: String {
+        get {
+            access(keyPath: \.dotCustomColor)
+            return UserDefaults.standard.string(forKey: SettingsKey.dotCustomColor.rawValue) ?? "#007AFF"
+        }
+        set {
+            withMutation(keyPath: \.dotCustomColor) {
+                UserDefaults.standard.set(newValue, forKey: SettingsKey.dotCustomColor.rawValue)
+            }
+        }
+    }
 
-    @AppStorage(SettingsKey.capsuleWindowFrame.rawValue)
-    var capsuleWindowFrame: Data = Data() { didSet { objectWillChange.send() } }
+    // MARK: - Window Frame
+
+    var capsuleWindowFrame: Data {
+        get {
+            access(keyPath: \.capsuleWindowFrame)
+            return UserDefaults.standard.data(forKey: SettingsKey.capsuleWindowFrame.rawValue) ?? Data()
+        }
+        set {
+            withMutation(keyPath: \.capsuleWindowFrame) {
+                UserDefaults.standard.set(newValue, forKey: SettingsKey.capsuleWindowFrame.rawValue)
+            }
+        }
+    }
 
     // MARK: - Actions
 

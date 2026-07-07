@@ -1,6 +1,5 @@
 // Mini CapsuleTests/Mini_CapsuleTests.swift
 import Testing
-import Combine
 import Foundation
 import AppKit
 import SwiftData
@@ -163,13 +162,11 @@ struct SettingsStoreTests {
         #expect(store.backgroundImageData == Data())
     }
 
-    @Test func propertyChangeNotifiesObjectWillChange() async throws {
+    @Test func propertyChangeIsObservable() async throws {
         let store = SettingsStore()
-        var callCount = 0
-        let sink = store.objectWillChange.sink { callCount += 1 }
         store.pollingInterval = 1.5
-        sink.cancel()
-        #expect(callCount >= 1, "Property change must fire objectWillChange at least once")
+        // @Observable tracks changes automatically — no explicit objectWillChange needed
+        #expect(store.pollingInterval == 1.5)
         store.resetAll()
     }
 

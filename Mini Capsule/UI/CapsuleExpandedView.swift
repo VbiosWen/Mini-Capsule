@@ -15,7 +15,7 @@ struct CapsuleExpandedView: View {
 
     @FocusState private var isSearchFocused: Bool
     @State private var selectedItemID: UUID?
-    @EnvironmentObject var settings: SettingsStore
+    @Environment(SettingsStore.self) var settings
 
     var body: some View {
         VStack(spacing: 0) {

@@ -16,7 +16,7 @@ struct CapsuleView: View {
     // Drag state — driven by CapsuleWindowController NSEvent monitor
     @State private var isDragging = false
 
-    @EnvironmentObject var settings: SettingsStore
+    @Environment(SettingsStore.self) var settings
 
     var body: some View {
         Group {

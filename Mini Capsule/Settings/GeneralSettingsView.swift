@@ -3,12 +3,12 @@ import SwiftUI
 import ServiceManagement
 
 struct GeneralSettingsView: View {
-    @EnvironmentObject var settings: SettingsStore
+    @Environment(SettingsStore.self) var settings
 
     var body: some View {
         Form {
             Section {
-                Toggle("开机启动", isOn: $settings.launchAtLogin)
+                Toggle("开机启动", isOn: Bindable(settings).launchAtLogin)
                     .onChange(of: settings.launchAtLogin) { _, newValue in
                         do {
                             if newValue {
@@ -21,12 +21,12 @@ struct GeneralSettingsView: View {
                         }
                     }
 
-                Toggle("菜单栏显示", isOn: $settings.showInMenuBar)
+                Toggle("菜单栏显示", isOn: Bindable(settings).showInMenuBar)
                     .onChange(of: settings.showInMenuBar) { _, _ in
                         ensureOneModeEnabled()
                     }
 
-                Toggle("屏幕悬浮窗", isOn: $settings.showFloatingPanel)
+                Toggle("屏幕悬浮窗", isOn: Bindable(settings).showFloatingPanel)
                     .onChange(of: settings.showFloatingPanel) { _, newValue in
                         ensureOneModeEnabled()
                         if newValue {
@@ -49,7 +49,7 @@ struct GeneralSettingsView: View {
 
             Section {
                 LabeledContent("折叠形态") {
-                    Picker("", selection: $settings.collapsedStyle) {
+                    Picker("", selection: Bindable(settings).collapsedStyle) {
                         Text("胶囊").tag("capsule")
                         Text("圆点").tag("dot")
                     }
@@ -59,7 +59,7 @@ struct GeneralSettingsView: View {
                 .disabled(!settings.showFloatingPanel)
 
                 LabeledContent("悬停展开延迟") {
-                    Picker("", selection: $settings.hoverExpandDelay) {
+                    Picker("", selection: Bindable(settings).hoverExpandDelay) {
                         Text("0.1 秒").tag(0.1)
                         Text("0.3 秒").tag(0.3)
                         Text("0.5 秒").tag(0.5)
@@ -71,7 +71,7 @@ struct GeneralSettingsView: View {
                 .disabled(!settings.showFloatingPanel)
 
                 LabeledContent("离开折叠延迟") {
-                    Picker("", selection: $settings.hoverCollapseDelay) {
+                    Picker("", selection: Bindable(settings).hoverCollapseDelay) {
                         Text("0.5 秒").tag(0.5)
                         Text("1.0 秒").tag(1.0)
                         Text("2.0 秒").tag(2.0)

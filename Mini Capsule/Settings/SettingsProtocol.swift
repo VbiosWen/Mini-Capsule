@@ -32,6 +32,7 @@ protocol SettingsProtocol: AnyObject {
     var backgroundImageData: Data { get set }
     var dotColorMode: String { get set }
     var dotCustomColor: String { get set }
+    var capsuleWindowFrame: Data { get set }
 
     // MARK: - Actions
     func resetAll()

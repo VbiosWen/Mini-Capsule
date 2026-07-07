@@ -5,7 +5,7 @@ import AppKit
 import UniformTypeIdentifiers
 
 struct AdvancedSettingsView: View {
-    @EnvironmentObject var settings: SettingsStore
+    @Environment(SettingsStore.self) var settings
     @Environment(\.modelContext) private var modelContext
 
     @State private var isOperating = false

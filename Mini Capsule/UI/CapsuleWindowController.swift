@@ -2,7 +2,6 @@
 import AppKit
 import SwiftUI
 import SwiftData
-import Combine
 
 /// Custom NSPanel that can become key when programmatically requested,
 /// even with the nonactivatingPanel style — required for TextField input.
@@ -15,7 +14,6 @@ final class CapsuleWindowController: NSWindowController, NSWindowDelegate {
     private let settingsStore: SettingsStore
     private var isExpanded = false
     private var observers: [NSObjectProtocol] = []
-    private var cancellables = Set<AnyCancellable>()
 
     // Drag monitoring
     private var dragMonitor: Any?
@@ -63,7 +61,7 @@ final class CapsuleWindowController: NSWindowController, NSWindowDelegate {
         }
 
         let capsuleView = CapsuleView()
-            .environmentObject(settingsStore)
+            .environment(settingsStore)
             .modelContainer(modelContainer)
 
         panel.contentView = NSHostingView(rootView: capsuleView)
@@ -195,11 +193,15 @@ final class CapsuleWindowController: NSWindowController, NSWindowDelegate {
             }
         )
 
-        // Listen for collapsed style changes via settings store
-        settingsStore.objectWillChange
-            .sink { [weak self] _ in
+        // Listen for collapsed style changes via UserDefaults
+        observers.append(
+            NotificationCenter.default.addObserver(
+                forName: UserDefaults.didChangeNotification,
+                object: nil,
+                queue: .main
+            ) { [weak self] _ in
                 guard let self = self, let window = self.window, !self.isExpanded else { return }
-                let style = self.settingsStore.collapsedStyle
+                let style = UserDefaults.standard.string(forKey: SettingsKey.collapsedStyle.rawValue) ?? "capsule"
                 let radius: CGFloat = style == "dot" ? 6 : 18
                 window.contentView?.layer?.cornerRadius = radius
                 let size = style == "dot" ? Self.dotCollapsedSize : Self.capsuleCollapsedSize
@@ -213,7 +215,7 @@ final class CapsuleWindowController: NSWindowController, NSWindowDelegate {
                     window.setFrame(newFrame, display: true, animate: true)
                 }
             }
-            .store(in: &cancellables)
+        )
 
         // Listen for reset position request
         observers.append(

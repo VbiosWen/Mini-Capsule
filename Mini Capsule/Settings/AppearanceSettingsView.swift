@@ -4,7 +4,7 @@ import AppKit
 import UniformTypeIdentifiers
 
 struct AppearanceSettingsView: View {
-    @EnvironmentObject var settings: SettingsStore
+    @Environment(SettingsStore.self) var settings
 
     @State private var thumbnailImage: NSImage?
     @State private var isChoosingImage = false
@@ -14,7 +14,7 @@ struct AppearanceSettingsView: View {
             Section {
                 LabeledContent("失焦不透明度") {
                     HStack(spacing: 8) {
-                        Slider(value: $settings.panelOpacityUnfocused, in: 0.3...1.0, step: 0.05)
+                        Slider(value: Bindable(settings).panelOpacityUnfocused, in: 0.3...1.0, step: 0.05)
                             .frame(width: 150)
                         Text(String(format: "%.0f%%", settings.panelOpacityUnfocused * 100))
                             .foregroundColor(.secondary)
@@ -66,7 +66,7 @@ struct AppearanceSettingsView: View {
 
             Section {
                 LabeledContent("圆点颜色模式") {
-                    Picker("", selection: $settings.dotColorMode) {
+                    Picker("", selection: Bindable(settings).dotColorMode) {
                         Text("自动").tag("auto")
                         Text("自定义").tag("custom")
                     }
