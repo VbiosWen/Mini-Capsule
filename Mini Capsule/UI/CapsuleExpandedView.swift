@@ -11,66 +11,75 @@ struct CapsuleExpandedView: View {
     @Environment(SettingsStore.self) private var settings
 
     var body: some View {
-        VStack(spacing: 0) {
-            // Search bar
-            searchBar
+        ZStack {
+            VStack(spacing: 0) {
+                // Search bar
+                searchBar
 
-            Divider()
+                Divider()
 
-            // Filter tabs
-            filterTabs
+                // Filter tabs
+                filterTabs
 
-            Divider()
+                Divider()
 
-            // Item list
-            itemList
+                // Item list
+                itemList
 
-            Divider()
+                Divider()
 
-            // Bottom bar
-            bottomBar
-        }
-        .frame(width: 280, height: 360)
-        .background {
-            backgroundLayer
-        }
-        .clipShape(RoundedRectangle(cornerRadius: 12))
-        .shadow(color: .black.opacity(0.2), radius: 12, y: 6)
-        .onAppear {
-            isSearchFocused = true
-            if let first = viewModel.filteredItems.first {
-                viewModel.selectedItemIDs = [first.id]
+                // Bottom bar
+                bottomBar
+            }
+            .frame(width: 280, height: 360)
+            .background {
+                backgroundLayer
+            }
+            .clipShape(RoundedRectangle(cornerRadius: 12))
+            .shadow(color: .black.opacity(0.2), radius: 12, y: 6)
+            .onAppear {
+                isSearchFocused = true
+                if let first = viewModel.filteredItems.first {
+                    viewModel.selectedItemIDs = [first.id]
+                }
+            }
+            .onDisappear {
+                viewModel.selectedItemIDs.removeAll()
+                viewModel.isMultiSelectMode = false
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .capsuleEscapePressed)) { _ in
+                // If search is empty and not in multi-select mode, collapse
+                if viewModel.searchText.isEmpty && !viewModel.isMultiSelectMode {
+                    capsuleViewModel.collapse()
+                }
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .capsuleEditTextItem)) { notification in
+                guard let userInfo = notification.userInfo,
+                      let item = userInfo["item"] as? ClipItem,
+                      let content = userInfo["content"] as? String else { return }
+                viewModel.editText(item, content: content)
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .capsulePasteItemToFront)) { notification in
+                guard let userInfo = notification.userInfo,
+                      let item = userInfo["item"] as? ClipItem else { return }
+                viewModel.pasteItem(item)
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .capsuleTogglePinItem)) { notification in
+                guard let userInfo = notification.userInfo,
+                      let item = userInfo["item"] as? ClipItem else { return }
+                viewModel.togglePin(item)
+            }
+            .background(
+                KeyboardEventHandler(viewModel: viewModel)
+            )
+
+            // Copy feedback overlay
+            VStack {
+                Spacer()
+                CopyFeedbackView(viewModel: viewModel)
+                    .padding(.bottom, 8)
             }
         }
-        .onDisappear {
-            viewModel.selectedItemIDs.removeAll()
-            viewModel.isMultiSelectMode = false
-        }
-        .onReceive(NotificationCenter.default.publisher(for: .capsuleEscapePressed)) { _ in
-            // If search is empty and not in multi-select mode, collapse
-            if viewModel.searchText.isEmpty && !viewModel.isMultiSelectMode {
-                capsuleViewModel.collapse()
-            }
-        }
-        .onReceive(NotificationCenter.default.publisher(for: .capsuleEditTextItem)) { notification in
-            guard let userInfo = notification.userInfo,
-                  let item = userInfo["item"] as? ClipItem,
-                  let content = userInfo["content"] as? String else { return }
-            viewModel.editText(item, content: content)
-        }
-        .onReceive(NotificationCenter.default.publisher(for: .capsulePasteItemToFront)) { notification in
-            guard let userInfo = notification.userInfo,
-                  let item = userInfo["item"] as? ClipItem else { return }
-            viewModel.pasteItem(item)
-        }
-        .onReceive(NotificationCenter.default.publisher(for: .capsuleTogglePinItem)) { notification in
-            guard let userInfo = notification.userInfo,
-                  let item = userInfo["item"] as? ClipItem else { return }
-            viewModel.togglePin(item)
-        }
-        .background(
-            KeyboardEventHandler(viewModel: viewModel)
-        )
     }
 
     // MARK: - Search Bar
