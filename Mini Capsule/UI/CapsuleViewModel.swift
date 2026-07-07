@@ -66,6 +66,7 @@ final class CapsuleViewModel {
     func onHoverExit() {
         hoverTask?.cancel()
         isExpandingReady = false
+        guard !isDragging else { return }
         hoverTask = Task { [weak self] in
             guard let self else { return }
             try? await Task.sleep(for: .seconds(self.collapseDelay))

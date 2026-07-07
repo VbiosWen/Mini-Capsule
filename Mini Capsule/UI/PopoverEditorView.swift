@@ -6,6 +6,7 @@ struct PopoverEditorView: View {
     let onSave: (String) -> Void
 
     @State private var editedText: String
+    @FocusState private var isFocused: Bool
     @Environment(\.dismiss) private var dismiss
 
     init(item: ClipItem, onSave: @escaping (String) -> Void) {
@@ -20,6 +21,7 @@ struct PopoverEditorView: View {
                 .font(.system(size: 12, design: .monospaced))
                 .frame(minWidth: 250, minHeight: 120)
                 .scrollContentBackground(.hidden)
+                .focused($isFocused)
                 .padding(8)
                 .background(.quaternary.opacity(0.3))
                 .clipShape(RoundedRectangle(cornerRadius: 8))
@@ -44,5 +46,10 @@ struct PopoverEditorView: View {
         }
         .padding(16)
         .frame(width: 280)
+        .onAppear {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                isFocused = true
+            }
+        }
     }
 }

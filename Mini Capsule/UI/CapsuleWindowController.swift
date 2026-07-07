@@ -19,7 +19,8 @@ final class CapsuleWindowController: NSWindowController, NSWindowDelegate {
     private var dragMonitor: Any?
     private var dragPrimer: DispatchWorkItem?
     private var isDragActive = false
-    private var previousDragLocation: NSPoint?
+    private var dragInitialMouse: NSPoint?
+    private var dragInitialOrigin: NSPoint?
 
     private static let capsuleCollapsedSize = NSSize(width: 200, height: 36)
     private var dotCollapsedSize: NSSize {
@@ -143,7 +144,8 @@ final class CapsuleWindowController: NSWindowController, NSWindowDelegate {
 
             switch event.type {
             case .leftMouseDown:
-                self.previousDragLocation = event.locationInWindow
+                self.dragInitialMouse = NSEvent.mouseLocation
+                self.dragInitialOrigin = self.window?.frame.origin
                 self.isDragActive = false
 
                 let primer = DispatchWorkItem {
@@ -158,23 +160,24 @@ final class CapsuleWindowController: NSWindowController, NSWindowDelegate {
                 return event
 
             case .leftMouseDragged:
-                let current = event.locationInWindow
-                if self.isDragActive, let prev = self.previousDragLocation {
-                    let dx = current.x - prev.x
-                    let dy = current.y - prev.y
-                    var origin = self.window?.frame.origin ?? .zero
-                    origin.x += dx
-                    origin.y += dy
-                    self.window?.setFrameOrigin(origin)
+                if self.isDragActive,
+                   let initMouse = self.dragInitialMouse,
+                   let initOrigin = self.dragInitialOrigin {
+                    let current = NSEvent.mouseLocation
+                    let dx = current.x - initMouse.x
+                    let dy = current.y - initMouse.y
+                    self.window?.setFrameOrigin(
+                        NSPoint(x: initOrigin.x + dx, y: initOrigin.y + dy)
+                    )
                 }
-                self.previousDragLocation = current
                 return self.isDragActive ? nil : event
 
             case .leftMouseUp:
                 self.dragPrimer?.cancel()
                 self.dragPrimer = nil
                 self.isDragActive = false
-                self.previousDragLocation = nil
+                self.dragInitialMouse = nil
+                self.dragInitialOrigin = nil
                 self.saveFrame()
                 NotificationCenter.default.post(
                     name: .capsuleDragEnded,

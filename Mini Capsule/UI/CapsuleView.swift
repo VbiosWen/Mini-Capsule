@@ -1,6 +1,9 @@
 // Mini Capsule/UI/CapsuleView.swift
 import SwiftUI
 import SwiftData
+#if os(macOS)
+import AppKit
+#endif
 
 struct CapsuleView: View {
     @Environment(\.modelContext) private var modelContext
@@ -35,6 +38,8 @@ struct CapsuleView: View {
             if hovering {
                 capsuleVM.onHoverEnter()
             } else {
+                // Don't collapse while user is interacting with the panel
+                if capsuleVM.isExpanded, NSApp.keyWindow != nil { return }
                 capsuleVM.onHoverExit()
             }
         }

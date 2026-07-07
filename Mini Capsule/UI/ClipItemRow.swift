@@ -71,8 +71,13 @@ struct ClipItemRow: View {
             } else {
                 hoverTask?.cancel()
                 isHovering = false
-                showPopover = false
-                showEditor = false
+                // Delay dismissal so the mouse has time to reach the popover
+                hoverTask = Task {
+                    try? await Task.sleep(for: .milliseconds(500))
+                    guard !Task.isCancelled else { return }
+                    showPopover = false
+                    showEditor = false
+                }
             }
         }
         .onTapGesture {
