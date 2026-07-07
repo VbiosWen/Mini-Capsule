@@ -15,6 +15,7 @@ final class ClipItem {
     var imageMD5: String?
     var fileBookmarks: Data?
     var isPinned: Bool
+    var sortOrder: Int?  // non-nil for pinned items, nil for unpinned
     var sourceAppBundleID: String?
 
     init(
@@ -29,6 +30,7 @@ final class ClipItem {
         imageMD5: String? = nil,
         fileBookmarks: Data? = nil,
         isPinned: Bool = false,
+        sortOrder: Int? = nil,    // non-nil for pinned items, nil for unpinned
         sourceAppBundleID: String? = nil
     ) {
         self.id = id
@@ -42,6 +44,7 @@ final class ClipItem {
         self.imageMD5 = imageMD5
         self.fileBookmarks = fileBookmarks
         self.isPinned = isPinned
+        self.sortOrder = sortOrder
         self.sourceAppBundleID = sourceAppBundleID
     }
 }
