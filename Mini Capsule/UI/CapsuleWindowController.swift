@@ -33,7 +33,7 @@ final class CapsuleWindowController: NSWindowController, NSWindowDelegate {
         self.modelContainer = modelContainer
         self.settingsStore = settingsStore
 
-        let savedFrame = Self.loadFrame(style: settingsStore.collapsedStyle)
+        let savedFrame = Self.loadFrame(style: settingsStore.collapsedStyle, frameData: settingsStore.capsuleWindowFrame)
 
         let panel = CapsulePanel(
             contentRect: savedFrame,
@@ -244,7 +244,7 @@ final class CapsuleWindowController: NSWindowController, NSWindowDelegate {
                 let newFrame = NSRect(x: x, y: y, width: size.width, height: size.height)
 
                 window.setFrame(newFrame, display: true, animate: true)
-                UserDefaults.standard.removeObject(forKey: SettingsKey.capsuleWindowFrame.rawValue)
+                self.settingsStore.capsuleWindowFrame = Data()
             }
         )
 
@@ -279,11 +279,13 @@ final class CapsuleWindowController: NSWindowController, NSWindowDelegate {
             "w": frame.size.width,
             "h": frame.size.height
         ]
-        UserDefaults.standard.set(frameDict, forKey: SettingsKey.capsuleWindowFrame.rawValue)
+        if let data = try? JSONEncoder().encode(frameDict) {
+            settingsStore.capsuleWindowFrame = data
+        }
     }
 
-    private static func loadFrame(style: String) -> NSRect {
-        let size = style == "dot" ? dotCollapsedSize : capsuleCollapsedSize
+    private static func loadFrame(style: String, frameData: Data) -> NSRect {
+        let size = style == "dot" ? Self.dotCollapsedSize : Self.capsuleCollapsedSize
 
         guard let screen = NSScreen.main else {
             return NSRect(x: 0, y: 0, width: size.width, height: size.height)
@@ -294,8 +296,9 @@ final class CapsuleWindowController: NSWindowController, NSWindowDelegate {
         var x = (screenWidth - size.width) / 2
         var y = screenHeight - size.height - 40
 
-        // Restore saved position, clamping to visible screen bounds
-        if let dict = UserDefaults.standard.dictionary(forKey: SettingsKey.capsuleWindowFrame.rawValue) as? [String: CGFloat],
+        // Restore saved position from SettingsStore, clamping to visible screen bounds
+        if frameData.count > 0,
+           let dict = try? JSONDecoder().decode([String: CGFloat].self, from: frameData),
            let savedX = dict["x"], let savedY = dict["y"] {
             let screenFrame = screen.visibleFrame
             let clampedX = min(max(savedX, screenFrame.minX), screenFrame.maxX - size.width)
