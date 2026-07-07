@@ -93,8 +93,7 @@ struct GeneralSettingsView: View {
 
             Section {
                 Button(action: {
-                    UserDefaults.standard.removeObject(forKey: "CapsuleWindowFrame")
-                    NotificationCenter.default.post(name: .resetCapsulePosition, object: nil)
+                    Self.resetCapsulePosition()
                 }) {
                     Label("重置浮动窗位置", systemImage: "arrow.counterclockwise")
                 }
@@ -104,6 +103,11 @@ struct GeneralSettingsView: View {
         }
         .formStyle(.grouped)
         .frame(width: 450, height: 370)
+    }
+
+    static func resetCapsulePosition() {
+        UserDefaults.standard.removeObject(forKey: "CapsuleWindowFrame")
+        NotificationCenter.default.post(name: .resetCapsulePosition, object: nil)
     }
 
     private func ensureOneModeEnabled() {

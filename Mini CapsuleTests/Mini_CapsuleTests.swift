@@ -432,9 +432,7 @@ struct GeneralSettingsViewTests {
             "w": CGFloat(200), "h": CGFloat(36)
         ], forKey: "CapsuleWindowFrame")
 
-        // When: the button action is triggered (clear key + post notification)
-        UserDefaults.standard.removeObject(forKey: "CapsuleWindowFrame")
-
+        // When: the static reset method is called
         try await confirmation(expectedCount: 1) { posted in
             let obs = NotificationCenter.default.addObserver(
                 forName: .resetCapsulePosition,
@@ -443,7 +441,7 @@ struct GeneralSettingsViewTests {
             ) { _ in posted() }
             defer { NotificationCenter.default.removeObserver(obs) }
 
-            NotificationCenter.default.post(name: .resetCapsulePosition, object: nil)
+            GeneralSettingsView.resetCapsulePosition()
         }
 
         // Then: the saved frame key is removed
