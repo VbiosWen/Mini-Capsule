@@ -6,6 +6,8 @@ struct CapsuleCollapsedView: View {
     let isCapturing: Bool
     let collapsedStyle: String
 
+    @EnvironmentObject var settings: SettingsStore
+
     var body: some View {
         if collapsedStyle == "dot" {
             dotView
@@ -30,10 +32,8 @@ struct CapsuleCollapsedView: View {
     }
 
     private var dotColor: Color {
-        let mode = UserDefaults.standard.string(forKey: "dotColorMode") ?? "auto"
-        if mode == "custom" {
-            let hex = UserDefaults.standard.string(forKey: "dotCustomColor") ?? "#007AFF"
-            return Color(hex: hex) ?? .blue
+        if settings.dotColorMode == "custom" {
+            return Color(hex: settings.dotCustomColor) ?? .blue
         }
         guard let item = latestItem else { return .gray }
         switch item.contentTypeRaw {
