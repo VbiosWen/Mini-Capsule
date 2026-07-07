@@ -4,11 +4,6 @@ import SwiftData
 import Foundation
 import Combine
 
-extension Notification.Name {
-    static let pollingIntervalDidChange = Notification.Name("SettingsPollingIntervalDidChange")
-    static let showFloatingPanelChanged = Notification.Name("ShowFloatingPanelChanged")
-}
-
 /// Export/import DTO for ClipItem serialization.
 private struct ClipItemExport: Codable {
     let type: String

@@ -3,13 +3,6 @@ import SwiftUI
 import SwiftData
 import AppKit
 
-extension NSNotification.Name {
-    static let capsuleDidChangeExpanded = NSNotification.Name("capsuleDidChangeExpanded")
-    static let capsuleDragStarted = NSNotification.Name("capsuleDragStarted")
-    static let capsuleDragEnded = NSNotification.Name("capsuleDragEnded")
-    static let resetCapsulePosition = NSNotification.Name("resetCapsulePosition")
-}
-
 struct CapsuleView: View {
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \ClipItem.timestamp, order: .reverse) private var items: [ClipItem]
