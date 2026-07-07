@@ -3,10 +3,49 @@ import AppKit
 import SwiftData
 import CoreGraphics
 import ApplicationServices
+import Carbon
 
 @MainActor
 final class PasteService {
     static var isSelfPaste = false
+
+    /// Dynamically resolve the key code for the "V" character.
+    /// Uses TIS + UCKeyTranslate for keyboard-layout-aware lookup,
+    /// falling back to QWERTY 0x09 if resolution fails.
+    static func keyCodeForV() -> CGKeyCode {
+        guard let inputSource = TISCopyCurrentKeyboardInputSource()?.takeRetainedValue(),
+              let layoutData = TISGetInputSourceProperty(inputSource, kTISPropertyUnicodeKeyLayoutData) else {
+            return 0x09
+        }
+        let keyboardLayout = Unmanaged<CFData>.fromOpaque(layoutData).takeUnretainedValue() as Data
+        let targetChar: UniChar = UniChar(Character("v").unicodeScalars.first?.value ?? 0x0076)
+        var deadKeyState: UInt32 = 0
+        return keyboardLayout.withUnsafeBytes { ptr -> CGKeyCode in
+            guard let base = ptr.baseAddress else { return 0x09 }
+            let layout = base.assumingMemoryBound(to: UCKeyboardLayout.self)
+            var chars = [UniChar](repeating: 0, count: 4)
+            var stringLength: Int = 0
+            for kc in UInt16(0)..<UInt16(128) {
+                stringLength = 0
+                let status = UCKeyTranslate(
+                    layout,
+                    kc,
+                    UInt16(kUCKeyActionDown),
+                    0,
+                    UInt32(LMGetKbdType()),
+                    UInt32(kUCKeyTranslateNoDeadKeysMask),
+                    &deadKeyState,
+                    chars.count,
+                    &stringLength,
+                    &chars
+                )
+                if status == 0 && stringLength > 0 && chars[0] == targetChar {
+                    return CGKeyCode(kc)
+                }
+            }
+            return 0x09
+        }
+    }
 
     /// Copy item to clipboard only (no auto-paste). Updates usage stats.
     static func copyToClipboard(_ item: ClipItem) {
@@ -79,11 +118,8 @@ final class PasteService {
         // Simulate Cmd+V via CGEvent
         let source = CGEventSource(stateID: .combinedSessionState)
 
-        // Note: CGEventSource.keyCode(forKeyboardType:source:character:) is not available
-        // in this SDK version. The hardcoded key code 0x09 (V) is QWERTY-specific.
-        // For non-QWERTY layouts, a keyboard layout lookup would be needed.
         let cmdKey: CGKeyCode = 0x37
-        let vKey: CGKeyCode = 0x09
+        let vKey: CGKeyCode = Self.keyCodeForV()
 
         let cmdDown = CGEvent(keyboardEventSource: source, virtualKey: cmdKey, keyDown: true)
         let vDown = CGEvent(keyboardEventSource: source, virtualKey: vKey, keyDown: true)
