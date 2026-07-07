@@ -13,7 +13,7 @@ struct SettingsStoreTests {
         "showHideShortcut", "quickPasteShortcut", "togglePinShortcut", "iCloudSyncEnabled",
         "launchAtLogin", "showInMenuBar", "showFloatingPanel", "collapsedStyle",
         "hoverExpandDelay", "hoverCollapseDelay",
-        "panelOpacityUnfocused", "backgroundImageData", "dotColorMode", "dotCustomColor",
+        "panelOpacityUnfocused", "backgroundImageData", "ringDiameter",
         "capsuleWindowFrame"
     ]
 
@@ -44,8 +44,7 @@ struct SettingsStoreTests {
         #expect(store.hoverExpandDelay == 0.3)
         #expect(store.hoverCollapseDelay == 1.0)
         #expect(store.panelOpacityUnfocused == 0.6)
-        #expect(store.dotColorMode == "auto")
-        #expect(store.dotCustomColor == "#007AFF")
+        #expect(store.ringDiameter == 60)
     }
 
     @Test func resetAllRestoresDefaults() async throws {
@@ -68,8 +67,7 @@ struct SettingsStoreTests {
         store.hoverExpandDelay = 1.0
         store.hoverCollapseDelay = 3.0
         store.panelOpacityUnfocused = 0.3
-        store.dotColorMode = "custom"
-        store.dotCustomColor = "#FF0000"
+        store.ringDiameter = 80
 
         // When: reset
         store.resetAll()
@@ -91,8 +89,7 @@ struct SettingsStoreTests {
         #expect(store.hoverExpandDelay == 0.3)
         #expect(store.hoverCollapseDelay == 1.0)
         #expect(store.panelOpacityUnfocused == 0.6)
-        #expect(store.dotColorMode == "auto")
-        #expect(store.dotCustomColor == "#007AFF")
+        #expect(store.ringDiameter == 60)
     }
 
     @Test func settingsPersistAcrossStoreInstances() async throws {
@@ -142,13 +139,11 @@ struct SettingsStoreTests {
         store.hoverCollapseDelay = 3.0
         store.panelOpacityUnfocused = 0.3
         store.backgroundImageData = "bg".data(using: .utf8)!
-        store.dotColorMode = "custom"
-        store.dotCustomColor = "#FF0000"
+        store.ringDiameter = 100
 
         #expect(store.historyMaxCount == 800)
         #expect(store.collapsedStyle == "dot")
-        #expect(store.dotColorMode == "custom")
-        #expect(store.dotCustomColor == "#FF0000")
+        #expect(store.ringDiameter == 100)
         #expect(store.panelOpacityUnfocused == 0.3)
         #expect(store.backgroundImageData == "bg".data(using: .utf8)!)
 
@@ -156,8 +151,7 @@ struct SettingsStoreTests {
 
         #expect(store.historyMaxCount == 200)
         #expect(store.collapsedStyle == "capsule")
-        #expect(store.dotColorMode == "auto")
-        #expect(store.dotCustomColor == "#007AFF")
+        #expect(store.ringDiameter == 60)
         #expect(store.panelOpacityUnfocused == 0.6)
         #expect(store.backgroundImageData == Data())
     }
@@ -194,8 +188,7 @@ struct SettingsStoreTests {
         #expect(store.hoverCollapseDelay == 1.0)
         #expect(store.panelOpacityUnfocused == 0.6)
         #expect(store.backgroundImageData == Data())
-        #expect(store.dotColorMode == "auto")
-        #expect(store.dotCustomColor == "#007AFF")
+        #expect(store.ringDiameter == 60)
     }
 
     // MARK: - Notification Names
