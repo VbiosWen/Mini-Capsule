@@ -118,15 +118,14 @@ struct CapsuleView: View {
                 if dragWorkItem == nil && !isDragPrimed && !isDragging {
                     // Cancel any pending hover expansion
                     hoverWorkItem?.cancel()
+                    if isExpanded {
+                        withAnimation(.spring(response: 0.25, dampingFraction: 0.8)) {
+                            isExpanded = false
+                        }
+                        postExpandedNotification()
+                    }
 
                     let workItem = DispatchWorkItem {
-                        // Collapse before dragging so the user moves the smaller window
-                        if isExpanded {
-                            withAnimation(.spring(response: 0.25, dampingFraction: 0.8)) {
-                                isExpanded = false
-                            }
-                            postExpandedNotification()
-                        }
                         isDragPrimed = true
                     }
                     dragWorkItem = workItem
