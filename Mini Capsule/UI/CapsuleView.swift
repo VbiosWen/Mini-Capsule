@@ -49,6 +49,9 @@ struct CapsuleView: View {
         .onReceive(NotificationCenter.default.publisher(for: .capsuleDragEnded)) { _ in
             capsuleVM.onDragEnd()
         }
+        .onReceive(NotificationCenter.default.publisher(for: .capsuleDidResignKey)) { _ in
+            capsuleVM.collapse()
+        }
         .onChange(of: items.first?.id) { _, _ in
             capsuleVM.onNewItemCaptured()
         }

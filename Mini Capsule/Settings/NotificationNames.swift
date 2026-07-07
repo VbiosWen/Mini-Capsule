@@ -28,6 +28,9 @@ extension Notification.Name {
     /// Posted to request resetting the capsule window position to default.
     static let resetCapsulePosition = Notification.Name("resetCapsulePosition")
 
+    /// Posted when the capsule panel resigns key window status.
+    static let capsuleDidResignKey = Notification.Name("capsuleDidResignKey")
+
     /// Posted when Escape key is pressed in the expanded capsule.
     static let capsuleEscapePressed = Notification.Name("capsuleEscapePressed")
 

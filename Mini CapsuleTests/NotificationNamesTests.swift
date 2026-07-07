@@ -13,14 +13,16 @@ struct NotificationNamesTests {
         #expect(Notification.Name.capsuleDragStarted == Notification.Name("capsuleDragStarted"))
         #expect(Notification.Name.capsuleDragEnded == Notification.Name("capsuleDragEnded"))
         #expect(Notification.Name.resetCapsulePosition == Notification.Name("resetCapsulePosition"))
+        #expect(Notification.Name.capsuleDidResignKey == Notification.Name("capsuleDidResignKey"))
     }
 
     @Test func allNotificationValuesAreUnique() async throws {
         let values: Set<String> = [
             "SettingsPollingIntervalDidChange", "ShowFloatingPanelChanged",
             "capsuleDidChangeExpanded", "capsuleDragStarted",
-            "capsuleDragEnded", "resetCapsulePosition"
+            "capsuleDragEnded", "resetCapsulePosition",
+            "capsuleDidResignKey"
         ]
-        #expect(values.count == 6)
+        #expect(values.count == 7)
     }
 }

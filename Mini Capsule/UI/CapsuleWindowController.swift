@@ -334,6 +334,10 @@ final class CapsuleWindowController: NSWindowController, NSWindowDelegate {
         saveFrame()
     }
 
+    func windowDidResignKey(_ notification: Notification) {
+        NotificationCenter.default.post(name: .capsuleDidResignKey, object: nil)
+    }
+
     private func saveFrame() {
         guard let frame = window?.frame else { return }
         let frameDict: [String: CGFloat] = [
