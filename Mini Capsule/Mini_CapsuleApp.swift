@@ -47,7 +47,7 @@ class CapsuleAppDelegate: NSObject, NSApplicationDelegate {
         clipboardMonitor = monitor
 
         // Start menu bar
-        let menuBar = MenuBarService()
+        let menuBar = MenuBarService(settings: settingsStore)
         menuBar.start(context: Self.sharedModelContainer.mainContext)
         menuBarService = menuBar
 

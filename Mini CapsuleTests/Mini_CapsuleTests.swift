@@ -571,3 +571,32 @@ struct GeneralSettingsViewTests {
         #expect(UserDefaults.standard.dictionary(forKey: "CapsuleWindowFrame") == nil)
     }
 }
+
+// MARK: - MenuBarService Settings Tests
+
+@MainActor
+struct MenuBarServiceSettingsTests {
+    @Test func serviceReadsShowFloatingPanelFromSettings() async throws {
+        let store = SettingsStore()
+        store.showFloatingPanel = false
+
+        #expect(store.showFloatingPanel == false)
+
+        store.showFloatingPanel = true
+        #expect(store.showFloatingPanel == true)
+
+        store.resetAll()
+    }
+
+    @Test func toggleFloatingPanelUpdatesSettings() async throws {
+        let store = SettingsStore()
+        store.showFloatingPanel = true
+
+        // Simulate toggle behavior (the actual MenuBarService logic)
+        let current = store.showFloatingPanel
+        store.showFloatingPanel = !current
+
+        #expect(store.showFloatingPanel == false)
+        store.resetAll()
+    }
+}

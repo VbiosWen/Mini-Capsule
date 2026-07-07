@@ -8,6 +8,11 @@ final class MenuBarService: NSObject, NSMenuDelegate {
     private var statusItem: NSStatusItem?
     private var context: ModelContext?
     private var menu: NSMenu?
+    private weak var settings: SettingsProtocol?
+
+    init(settings: SettingsProtocol) {
+        self.settings = settings
+    }
 
     func start(context: ModelContext) {
         self.context = context
@@ -58,7 +63,7 @@ final class MenuBarService: NSObject, NSMenuDelegate {
 
         guard let context = context else { return }
 
-        let showFloating = UserDefaults.standard.bool(forKey: "showFloatingPanel")
+        let showFloating = settings?.showFloatingPanel ?? true
 
         // Recent items
         let descriptor = FetchDescriptor<ClipItem>(
@@ -122,8 +127,9 @@ final class MenuBarService: NSObject, NSMenuDelegate {
     }
 
     @objc private func toggleFloatingPanel() {
-        let current = UserDefaults.standard.bool(forKey: "showFloatingPanel")
-        UserDefaults.standard.set(!current, forKey: "showFloatingPanel")
+        guard let s = settings else { return }
+        let current = s.showFloatingPanel
+        s.showFloatingPanel = !current
         NotificationCenter.default.post(
             name: .showFloatingPanelChanged,
             object: nil,
