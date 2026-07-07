@@ -231,26 +231,14 @@ final class SettingsStore: SettingsProtocol {
         }
     }
 
-    var dotColorMode: String {
+    var ringDiameter: Double {
         get {
-            access(keyPath: \.dotColorMode)
-            return UserDefaults.standard.string(forKey: SettingsKey.dotColorMode.rawValue) ?? "auto"
+            access(keyPath: \.ringDiameter)
+            return UserDefaults.standard.object(forKey: SettingsKey.ringDiameter.rawValue) as? Double ?? 60
         }
         set {
-            withMutation(keyPath: \.dotColorMode) {
-                UserDefaults.standard.set(newValue, forKey: SettingsKey.dotColorMode.rawValue)
-            }
-        }
-    }
-
-    var dotCustomColor: String {
-        get {
-            access(keyPath: \.dotCustomColor)
-            return UserDefaults.standard.string(forKey: SettingsKey.dotCustomColor.rawValue) ?? "#007AFF"
-        }
-        set {
-            withMutation(keyPath: \.dotCustomColor) {
-                UserDefaults.standard.set(newValue, forKey: SettingsKey.dotCustomColor.rawValue)
+            withMutation(keyPath: \.ringDiameter) {
+                UserDefaults.standard.set(newValue, forKey: SettingsKey.ringDiameter.rawValue)
             }
         }
     }
@@ -289,8 +277,7 @@ final class SettingsStore: SettingsProtocol {
         hoverCollapseDelay = 1.0
         panelOpacityUnfocused = 0.6
         backgroundImageData = Data()
-        dotColorMode = "auto"
-        dotCustomColor = "#007AFF"
+        ringDiameter = 60
         capsuleWindowFrame = Data()
     }
 
