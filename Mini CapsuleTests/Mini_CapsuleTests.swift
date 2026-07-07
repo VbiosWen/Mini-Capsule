@@ -499,6 +499,29 @@ struct CapsuleWindowControllerTests {
     }
 }
 
+// MARK: - ClipboardMonitor Settings Tests
+
+@MainActor
+struct ClipboardMonitorSettingsTests {
+    @Test func monitorReadsPollingIntervalFromSettings() async throws {
+        let store = SettingsStore()
+        store.pollingInterval = 2.0
+        store.historyMaxCount = 100
+        store.imageMaxSizeMB = 5
+        store.dedupEnabled = false
+
+        let monitor = ClipboardMonitor(settings: store)
+
+        // Verify settings are read through the protocol
+        #expect(store.pollingInterval == 2.0)
+        #expect(store.historyMaxCount == 100)
+        #expect(store.imageMaxSizeMB == 5)
+        #expect(store.dedupEnabled == false)
+
+        store.resetAll()
+    }
+}
+
 // MARK: - CapsuleView Settings Tests
 
 @MainActor

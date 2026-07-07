@@ -42,7 +42,7 @@ class CapsuleAppDelegate: NSObject, NSApplicationDelegate {
         capsuleWindowController = controller
 
         // Start clipboard monitoring
-        let monitor = ClipboardMonitor()
+        let monitor = ClipboardMonitor(settings: settingsStore)
         monitor.start(context: Self.sharedModelContainer.mainContext)
         clipboardMonitor = monitor
 

@@ -6,34 +6,38 @@ import CryptoKit
 
 @MainActor
 final class ClipboardMonitor: ObservableObject {
+    private weak var settings: SettingsProtocol?
     private var timer: Timer?
     private var lastChangeCount: Int = NSPasteboard.general.changeCount
     private(set) var context: ModelContext?
 
+    init(settings: SettingsProtocol) {
+        self.settings = settings
+    }
+
     private var currentPollingInterval: TimeInterval {
-        let interval = UserDefaults.standard.double(forKey: "pollingInterval")
-        return interval > 0 ? interval : 0.5
+        guard let s = settings else { return 0.5 }
+        return s.pollingInterval > 0 ? s.pollingInterval : 0.5
     }
 
     private var maxImageBytes: Int {
-        let mb = UserDefaults.standard.integer(forKey: "imageMaxSizeMB")
-        switch mb {
+        guard let s = settings else { return 2_000_000 }
+        switch s.imageMaxSizeMB {
         case 1: return 1_000_000
         case 5: return 5_000_000
-        case 0: return Int.max  // unlimited
+        case 0: return Int.max
         default: return 2_000_000
         }
     }
 
     private var maxHistoryCount: Int {
-        let count = UserDefaults.standard.integer(forKey: "historyMaxCount")
-        return count >= 50 ? count : 200
+        guard let s = settings else { return 200 }
+        return s.historyMaxCount >= 50 ? s.historyMaxCount : 200
     }
 
     private var isDedupEnabled: Bool {
-        // Default true if key not set
-        if UserDefaults.standard.object(forKey: "dedupEnabled") == nil { return true }
-        return UserDefaults.standard.bool(forKey: "dedupEnabled")
+        guard let s = settings else { return true }
+        return s.dedupEnabled
     }
 
     func start(context: ModelContext) {
