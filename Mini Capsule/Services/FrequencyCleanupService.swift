@@ -3,13 +3,13 @@ import Foundation
 import SwiftData
 
 enum FrequencyCleanupService {
-    static func performCleanup(context: ModelContext, keepCount: Int? = nil) {
+    static func performCleanup(context: ModelContext, keepCount: Int? = nil, settings: SettingsProtocol? = nil) {
         let allItems = FetchDescriptor<ClipItem>()
 
         guard let items = try? context.fetch(allItems) else { return }
 
         let keep = keepCount ?? {
-            let count = UserDefaults.standard.integer(forKey: "historyMaxCount")
+            let count = settings?.historyMaxCount ?? 200
             return count >= 50 ? min(50, count) : 50
         }()
 
