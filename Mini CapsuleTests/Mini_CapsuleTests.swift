@@ -1,5 +1,6 @@
 // Mini CapsuleTests/Mini_CapsuleTests.swift
 import Testing
+import Combine
 import Foundation
 import AppKit
 import SwiftData
@@ -119,6 +120,83 @@ struct SettingsStoreTests {
 
         // Cleanup
         store.resetAll()
+    }
+
+    @Test func allSettingsCombinatorialChangeThenReset() async throws {
+        let store = SettingsStore()
+
+        store.historyMaxCount = 800
+        store.imageMaxSizeMB = 5
+        store.pollingInterval = 2.0
+        store.cleanupOnStartup = false
+        store.dedupEnabled = false
+        store.showHideShortcut = "cmd+option+K"
+        store.quickPasteShortcut = "cmd+shift+X"
+        store.togglePinShortcut = "cmd+shift+P"
+        store.iCloudSyncEnabled = true
+        store.launchAtLogin = true
+        store.showInMenuBar = false
+        store.showFloatingPanel = false
+        store.collapsedStyle = "dot"
+        store.hoverExpandDelay = 1.0
+        store.hoverCollapseDelay = 3.0
+        store.panelOpacityUnfocused = 0.3
+        store.backgroundImageData = "bg".data(using: .utf8)!
+        store.dotColorMode = "custom"
+        store.dotCustomColor = "#FF0000"
+
+        #expect(store.historyMaxCount == 800)
+        #expect(store.collapsedStyle == "dot")
+        #expect(store.dotColorMode == "custom")
+        #expect(store.dotCustomColor == "#FF0000")
+        #expect(store.panelOpacityUnfocused == 0.3)
+        #expect(store.backgroundImageData == "bg".data(using: .utf8)!)
+
+        store.resetAll()
+
+        #expect(store.historyMaxCount == 200)
+        #expect(store.collapsedStyle == "capsule")
+        #expect(store.dotColorMode == "auto")
+        #expect(store.dotCustomColor == "#007AFF")
+        #expect(store.panelOpacityUnfocused == 0.6)
+        #expect(store.backgroundImageData == Data())
+    }
+
+    @Test func propertyChangeNotifiesObjectWillChange() async throws {
+        let store = SettingsStore()
+        var callCount = 0
+        let sink = store.objectWillChange.sink { callCount += 1 }
+        store.pollingInterval = 1.5
+        sink.cancel()
+        #expect(callCount >= 1, "Property change must fire objectWillChange at least once")
+    }
+
+    @Test func defaultValuesAreConsistent() async throws {
+        let defaults = UserDefaults.standard
+        for key in SettingsKey.allCases {
+            defaults.removeObject(forKey: key.rawValue)
+        }
+        let store = SettingsStore()
+
+        #expect(store.historyMaxCount == 200)
+        #expect(store.imageMaxSizeMB == 2)
+        #expect(store.pollingInterval == 0.5)
+        #expect(store.cleanupOnStartup == true)
+        #expect(store.dedupEnabled == true)
+        #expect(store.showHideShortcut == "cmd+shift+V")
+        #expect(store.quickPasteShortcut == "cmd+shift+C")
+        #expect(store.togglePinShortcut == "")
+        #expect(store.iCloudSyncEnabled == false)
+        #expect(store.launchAtLogin == false)
+        #expect(store.showInMenuBar == true)
+        #expect(store.showFloatingPanel == true)
+        #expect(store.collapsedStyle == "capsule")
+        #expect(store.hoverExpandDelay == 0.3)
+        #expect(store.hoverCollapseDelay == 1.0)
+        #expect(store.panelOpacityUnfocused == 0.6)
+        #expect(store.backgroundImageData == Data())
+        #expect(store.dotColorMode == "auto")
+        #expect(store.dotCustomColor == "#007AFF")
     }
 
     // MARK: - Notification Names
