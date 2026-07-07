@@ -9,9 +9,12 @@ struct CapsuleCollapsedView: View {
     @Environment(SettingsStore.self) var settings
 
     var body: some View {
-        if collapsedStyle == "dot" {
+        switch collapsedStyle {
+        case "dot":
             dotView
-        } else {
+        case "icon":
+            iconView
+        default:
             capsuleView
         }
     }
@@ -41,6 +44,33 @@ struct CapsuleCollapsedView: View {
         case "image": return .blue
         case "file": return .orange
         default: return .gray
+        }
+    }
+
+    // MARK: - Icon variant (E2)
+
+    private var iconView: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: 6)
+                .fill(.ultraThinMaterial)
+                .frame(width: 24, height: 24)
+
+            Image(systemName: typeIconName)
+                .font(.system(size: 14))
+                .foregroundColor(.primary)
+        }
+        .scaleEffect(isCapturing ? 1.2 : 1.0)
+        .animation(.spring(response: 0.3, dampingFraction: 0.6), value: isCapturing)
+        .shadow(color: .black.opacity(0.15), radius: 4, y: 2)
+    }
+
+    private var typeIconName: String {
+        guard let item = latestItem else { return "clipboard" }
+        switch item.contentTypeRaw {
+        case "text": return "doc.text"
+        case "image": return "photo"
+        case "file": return "doc"
+        default: return "clipboard"
         }
     }
 

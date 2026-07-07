@@ -23,10 +23,15 @@ final class CapsuleWindowController: NSWindowController, NSWindowDelegate {
 
     private static let capsuleCollapsedSize = NSSize(width: 200, height: 36)
     private static let dotCollapsedSize = NSSize(width: 12, height: 12)
+    private static let iconCollapsedSize = NSSize(width: 24, height: 24)
     private static let expandedSize = NSSize(width: 280, height: 360)
 
     private var currentCollapsedSize: NSSize {
-        return settingsStore.collapsedStyle == "dot" ? Self.dotCollapsedSize : Self.capsuleCollapsedSize
+        switch settingsStore.collapsedStyle {
+        case "dot": return Self.dotCollapsedSize
+        case "icon": return Self.iconCollapsedSize
+        default: return Self.capsuleCollapsedSize
+        }
     }
 
     init(modelContainer: ModelContainer, settingsStore: SettingsStore) {
@@ -71,7 +76,13 @@ final class CapsuleWindowController: NSWindowController, NSWindowDelegate {
         panel.contentView?.wantsLayer = true
         // Clip window to capsule shape
         panel.contentView?.layer?.masksToBounds = true
-        panel.contentView?.layer?.cornerRadius = settingsStore.collapsedStyle == "dot" ? 6 : 18
+        let initCornerRadius: CGFloat
+        switch settingsStore.collapsedStyle {
+        case "dot": initCornerRadius = 6
+        case "icon": initCornerRadius = 6
+        default: initCornerRadius = 18
+        }
+        panel.contentView?.layer?.cornerRadius = initCornerRadius
 
         observeExpandedState()
         startDragMonitoring()
@@ -178,7 +189,11 @@ final class CapsuleWindowController: NSWindowController, NSWindowDelegate {
                 if isExpanded {
                     cornerRadius = 12
                 } else {
-                    cornerRadius = self.settingsStore.collapsedStyle == "dot" ? 6 : 18
+                    switch self.settingsStore.collapsedStyle {
+                    case "dot": cornerRadius = 6
+                    case "icon": cornerRadius = 6
+                    default: cornerRadius = 18
+                    }
                 }
                 window.contentView?.layer?.cornerRadius = cornerRadius
 
@@ -209,9 +224,19 @@ final class CapsuleWindowController: NSWindowController, NSWindowDelegate {
             ) { [weak self] _ in
                 guard let self = self, let window = self.window, !self.isExpanded else { return }
                 let style = UserDefaults.standard.string(forKey: SettingsKey.collapsedStyle.rawValue) ?? "capsule"
-                let radius: CGFloat = style == "dot" ? 6 : 18
+                let radius: CGFloat
+                switch style {
+                case "dot": radius = 6
+                case "icon": radius = 6
+                default: radius = 18
+                }
                 window.contentView?.layer?.cornerRadius = radius
-                let size = style == "dot" ? Self.dotCollapsedSize : Self.capsuleCollapsedSize
+                let size: NSSize
+                switch style {
+                case "dot": size = Self.dotCollapsedSize
+                case "icon": size = Self.iconCollapsedSize
+                default: size = Self.capsuleCollapsedSize
+                }
                 if window.frame.size != size {
                     let newFrame = NSRect(
                         x: window.frame.midX - size.width / 2,
@@ -235,7 +260,12 @@ final class CapsuleWindowController: NSWindowController, NSWindowDelegate {
                       let window = self.window,
                       let screen = NSScreen.main else { return }
 
-                let size = self.settingsStore.collapsedStyle == "dot" ? Self.dotCollapsedSize : Self.capsuleCollapsedSize
+                let size: NSSize
+                switch self.settingsStore.collapsedStyle {
+                case "dot": size = Self.dotCollapsedSize
+                case "icon": size = Self.iconCollapsedSize
+                default: size = Self.capsuleCollapsedSize
+                }
                 let screenWidth = screen.visibleFrame.width
                 let screenHeight = screen.visibleFrame.maxY
 
@@ -285,7 +315,12 @@ final class CapsuleWindowController: NSWindowController, NSWindowDelegate {
     }
 
     private static func loadFrame(style: String, frameData: Data) -> NSRect {
-        let size = style == "dot" ? Self.dotCollapsedSize : Self.capsuleCollapsedSize
+        let size: NSSize
+        switch style {
+        case "dot": size = Self.dotCollapsedSize
+        case "icon": size = Self.iconCollapsedSize
+        default: size = Self.capsuleCollapsedSize
+        }
 
         guard let screen = NSScreen.main else {
             return NSRect(x: 0, y: 0, width: size.width, height: size.height)
