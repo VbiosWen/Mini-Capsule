@@ -12,6 +12,7 @@ struct ClipItemRow: View {
     @State private var isHovering = false
     @State private var showPopover = false
     @State private var showEditor = false
+    @State private var isPopoverHovered = false
     @State private var hoverTask: Task<Void, Never>?
 
     var body: some View {
@@ -71,12 +72,14 @@ struct ClipItemRow: View {
             } else {
                 hoverTask?.cancel()
                 isHovering = false
-                // Delay popover dismissal so the mouse has time to reach the popover.
-                // Don't dismiss the editor — it has its own dismiss buttons.
+                // Delay popover dismissal. If the mouse is currently hovering
+                // the popover, don't dismiss — the popover's own hover exit will handle it.
                 hoverTask = Task {
                     try? await Task.sleep(for: .milliseconds(500))
                     guard !Task.isCancelled else { return }
-                    showPopover = false
+                    if !isPopoverHovered {
+                        showPopover = false
+                    }
                 }
             }
         }
@@ -87,6 +90,20 @@ struct ClipItemRow: View {
         .contextMenu { contextMenuContent }  // E5
         .popover(isPresented: $showPopover, arrowEdge: .trailing) {
             popoverContent
+                .onHover { hovering in
+                    isPopoverHovered = hovering
+                }
+        }
+        .onChange(of: isPopoverHovered) { _, hovering in
+            if !hovering && showPopover {
+                // Mouse left the popover — dismiss after a short grace period
+                hoverTask?.cancel()
+                hoverTask = Task {
+                    try? await Task.sleep(for: .milliseconds(200))
+                    guard !Task.isCancelled else { return }
+                    showPopover = false
+                }
+            }
         }
         .popover(isPresented: $showEditor, arrowEdge: .trailing) {
             PopoverEditorView(item: item) { newContent in
