@@ -11,6 +11,8 @@ final class CapsulePanel: NSPanel {
 
 final class CapsuleWindowController: NSWindowController, NSWindowDelegate {
     private let modelContainer: ModelContainer
+    private var isExpanded = false
+    private var observers: [NSObjectProtocol] = []
 
     private static let frameKey = "CapsuleWindowFrame"
     private static let capsuleCollapsedSize = NSSize(width: 200, height: 36)
@@ -57,6 +59,10 @@ final class CapsuleWindowController: NSWindowController, NSWindowDelegate {
 
         panel.contentView = NSHostingView(rootView: capsuleView)
         panel.contentView?.wantsLayer = true
+        // Clip window to capsule shape
+        panel.contentView?.layer?.masksToBounds = true
+        let initialStyle = UserDefaults.standard.string(forKey: "collapsedStyle") ?? "capsule"
+        panel.contentView?.layer?.cornerRadius = initialStyle == "dot" ? 6 : 18
 
         observeExpandedState()
     }
@@ -79,61 +85,94 @@ final class CapsuleWindowController: NSWindowController, NSWindowDelegate {
     }
 
     private func observeExpandedState() {
-        NotificationCenter.default.addObserver(
-            forName: .capsuleDidChangeExpanded,
-            object: nil,
-            queue: .main
-        ) { [weak self] notification in
-            guard let self = self,
-                  let window = self.window,
-                  let isExpanded = notification.userInfo?["isExpanded"] as? Bool else { return }
+        observers.append(
+            NotificationCenter.default.addObserver(
+                forName: .capsuleDidChangeExpanded,
+                object: nil,
+                queue: .main
+            ) { [weak self] notification in
+                guard let self = self,
+                      let window = self.window,
+                      let isExpanded = notification.userInfo?["isExpanded"] as? Bool else { return }
 
-            let collapsedSize = self.currentCollapsedSize
-            let targetSize = isExpanded ? Self.expandedSize : collapsedSize
-            let currentFrame = window.frame
+                let collapsedSize = self.currentCollapsedSize
+                let targetSize = isExpanded ? Self.expandedSize : collapsedSize
+                let currentFrame = window.frame
 
-            let newFrame = NSRect(
-                x: currentFrame.midX - targetSize.width / 2,
-                y: currentFrame.maxY - targetSize.height,
-                width: targetSize.width,
-                height: targetSize.height
-            )
+                // Update cornerRadius before animated resize so it animates with the frame
+                let cornerRadius: CGFloat
+                if isExpanded {
+                    cornerRadius = 12
+                } else {
+                    let style = UserDefaults.standard.string(forKey: "collapsedStyle") ?? "capsule"
+                    cornerRadius = style == "dot" ? 6 : 18
+                }
+                window.contentView?.layer?.cornerRadius = cornerRadius
 
-            window.setFrame(newFrame, display: true, animate: true)
+                let newFrame = NSRect(
+                    x: currentFrame.midX - targetSize.width / 2,
+                    y: currentFrame.maxY - targetSize.height,
+                    width: targetSize.width,
+                    height: targetSize.height
+                )
 
-            // When expanded, activate app and make key so TextField can receive input
-            if isExpanded {
-                NSApp.activate(ignoringOtherApps: true)
-                window.makeKey()
+                window.setFrame(newFrame, display: true, animate: true)
+                self.isExpanded = isExpanded
+
+                // When expanded, activate app and make key so TextField can receive input
+                if isExpanded {
+                    NSApp.activate(ignoringOtherApps: true)
+                    window.makeKey()
+                }
             }
-        }
+        )
 
         // Listen for collapsed style changes
-        NotificationCenter.default.addObserver(
-            forName: UserDefaults.didChangeNotification,
-            object: nil,
-            queue: .main
-        ) { [weak self] _ in
-            guard let self = self, let window = self.window else { return }
-            // If currently collapsed, resize to new collapsed size
-            // (expanded state is managed by CapsuleView hover logic)
-        }
+        observers.append(
+            NotificationCenter.default.addObserver(
+                forName: UserDefaults.didChangeNotification,
+                object: nil,
+                queue: .main
+            ) { [weak self] _ in
+                guard let self = self, let window = self.window else { return }
+                // If collapsed, update cornerRadius to match current style
+                if !self.isExpanded {
+                    let style = UserDefaults.standard.string(forKey: "collapsedStyle") ?? "capsule"
+                    let radius: CGFloat = style == "dot" ? 6 : 18
+                    window.contentView?.layer?.cornerRadius = radius
+
+                    // Also resize window to match new collapsed size
+                    let size = style == "dot" ? Self.dotCollapsedSize : Self.capsuleCollapsedSize
+                    if window.frame.size != size {
+                        let newFrame = NSRect(
+                            x: window.frame.midX - size.width / 2,
+                            y: window.frame.maxY - size.height,
+                            width: size.width,
+                            height: size.height
+                        )
+                        window.setFrame(newFrame, display: true, animate: true)
+                    }
+                }
+            }
+        )
 
         // Listen for show floating panel toggle
-        NotificationCenter.default.addObserver(
-            forName: .showFloatingPanelChanged,
-            object: nil,
-            queue: .main
-        ) { [weak self] notification in
-            guard let self = self,
-                  let window = self.window,
-                  let show = notification.userInfo?["show"] as? Bool else { return }
-            if show {
-                window.makeKeyAndOrderFront(nil)
-            } else {
-                window.orderOut(nil)
+        observers.append(
+            NotificationCenter.default.addObserver(
+                forName: .showFloatingPanelChanged,
+                object: nil,
+                queue: .main
+            ) { [weak self] notification in
+                guard let self = self,
+                      let window = self.window,
+                      let show = notification.userInfo?["show"] as? Bool else { return }
+                if show {
+                    window.makeKeyAndOrderFront(nil)
+                } else {
+                    window.orderOut(nil)
+                }
             }
-        }
+        )
     }
 
     func windowDidMove(_ notification: Notification) {

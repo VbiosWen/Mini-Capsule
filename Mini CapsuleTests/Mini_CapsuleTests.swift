@@ -1,6 +1,8 @@
 // Mini CapsuleTests/Mini_CapsuleTests.swift
 import Testing
 import Foundation
+import AppKit
+import SwiftData
 @testable import Mini_Capsule
 
 @MainActor
@@ -131,5 +133,122 @@ struct SettingsStoreTests {
 
     @Test func notificationNameResetCapsulePosition() async throws {
         #expect(NSNotification.Name.resetCapsulePosition == NSNotification.Name("resetCapsulePosition"))
+    }
+}
+
+// MARK: - CapsuleWindowController Tests
+
+@MainActor
+struct CapsuleWindowControllerTests {
+    /// Create an in-memory ModelContainer for testing.
+    private static func makeContainer() throws -> ModelContainer {
+        let schema = Schema([Item.self, ClipItem.self])
+        let config = ModelConfiguration(schema: schema, isStoredInMemoryOnly: true)
+        return try ModelContainer(for: schema, configurations: [config])
+    }
+
+    @Test func initialCornerRadiusCapsule() async throws {
+        let defaults = UserDefaults.standard
+        defaults.set("capsule", forKey: "collapsedStyle")
+
+        let container = try Self.makeContainer()
+        let controller = CapsuleWindowController(modelContainer: container)
+
+        #expect(controller.window?.contentView?.layer?.cornerRadius == 18)
+    }
+
+    @Test func initialCornerRadiusDot() async throws {
+        let defaults = UserDefaults.standard
+        defaults.set("dot", forKey: "collapsedStyle")
+
+        let container = try Self.makeContainer()
+        let controller = CapsuleWindowController(modelContainer: container)
+
+        #expect(controller.window?.contentView?.layer?.cornerRadius == 6)
+    }
+
+    @Test func updatesCornerRadiusOnExpandAndCollapse() async throws {
+        let defaults = UserDefaults.standard
+        defaults.set("capsule", forKey: "collapsedStyle")
+
+        let container = try Self.makeContainer()
+        let controller = CapsuleWindowController(modelContainer: container)
+
+        // Initial: capsule style → cornerRadius 18
+        #expect(controller.window?.contentView?.layer?.cornerRadius == 18)
+
+        // Expand → 12
+        NotificationCenter.default.post(
+            name: .capsuleDidChangeExpanded,
+            object: nil,
+            userInfo: ["isExpanded": true]
+        )
+        #expect(controller.window?.contentView?.layer?.cornerRadius == 12)
+
+        // Collapse back to capsule → 18
+        NotificationCenter.default.post(
+            name: .capsuleDidChangeExpanded,
+            object: nil,
+            userInfo: ["isExpanded": false]
+        )
+        #expect(controller.window?.contentView?.layer?.cornerRadius == 18)
+    }
+
+    @Test func updatesCornerRadiusOnStyleChangeWhenCollapsed() async throws {
+        let defaults = UserDefaults.standard
+        defaults.set("capsule", forKey: "collapsedStyle")
+
+        let container = try Self.makeContainer()
+        let controller = CapsuleWindowController(modelContainer: container)
+
+        // Start collapsed as capsule → 18
+        #expect(controller.window?.contentView?.layer?.cornerRadius == 18)
+
+        // Expand then collapse
+        NotificationCenter.default.post(
+            name: .capsuleDidChangeExpanded,
+            object: nil,
+            userInfo: ["isExpanded": true]
+        )
+        #expect(controller.window?.contentView?.layer?.cornerRadius == 12)
+
+        NotificationCenter.default.post(
+            name: .capsuleDidChangeExpanded,
+            object: nil,
+            userInfo: ["isExpanded": false]
+        )
+        #expect(controller.window?.contentView?.layer?.cornerRadius == 18)
+
+        // Change style to dot while collapsed
+        defaults.set("dot", forKey: "collapsedStyle")
+        NotificationCenter.default.post(
+            name: UserDefaults.didChangeNotification,
+            object: nil
+        )
+        #expect(controller.window?.contentView?.layer?.cornerRadius == 6)
+    }
+
+    @Test func doesNotUpdateCornerRadiusOnStyleChangeWhenExpanded() async throws {
+        let defaults = UserDefaults.standard
+        defaults.set("capsule", forKey: "collapsedStyle")
+
+        let container = try Self.makeContainer()
+        let controller = CapsuleWindowController(modelContainer: container)
+
+        // Expand
+        NotificationCenter.default.post(
+            name: .capsuleDidChangeExpanded,
+            object: nil,
+            userInfo: ["isExpanded": true]
+        )
+        #expect(controller.window?.contentView?.layer?.cornerRadius == 12)
+
+        // Change style to dot while expanded — should NOT affect cornerRadius
+        defaults.set("dot", forKey: "collapsedStyle")
+        NotificationCenter.default.post(
+            name: UserDefaults.didChangeNotification,
+            object: nil
+        )
+        #expect(controller.window?.contentView?.layer?.cornerRadius == 12)
     }
 }
