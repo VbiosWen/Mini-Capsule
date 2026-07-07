@@ -26,7 +26,7 @@ struct CapsuleCollapsedView: View {
             .fill(dotColor)
             .frame(width: 12, height: 12)
             .scaleEffect(isCapturing ? 1.3 : 1.0)
-            .animation(.easeInOut(duration: 0.3), value: isCapturing)
+            .animation(.spring(response: 0.3, dampingFraction: 0.6), value: isCapturing)
             .shadow(
                 color: .black.opacity(0.15),
                 radius: 4,
@@ -82,7 +82,7 @@ struct CapsuleCollapsedView: View {
                 .fill(isCapturing ? Color.blue : Color.green)
                 .frame(width: 8, height: 8)
                 .scaleEffect(isCapturing ? 1.3 : 1.0)
-                .animation(.easeInOut(duration: 0.3), value: isCapturing)
+                .animation(.spring(response: 0.3, dampingFraction: 0.6), value: isCapturing)
 
             Text(summaryText)
                 .font(.system(size: 12, weight: .medium))
