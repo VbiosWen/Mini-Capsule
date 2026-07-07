@@ -5,7 +5,6 @@ import AppKit
 
 struct CapsuleExpandedView: View {
     @Binding var searchText: String
-    let isDragPrimed: Bool
     let isExpandedReady: Bool
     var onItemTap: (ClipItem) -> Void
     var onItemDelete: (ClipItem) -> Void
@@ -99,32 +98,14 @@ struct CapsuleExpandedView: View {
 
                 Rectangle()
                     .fill(.ultraThinMaterial)
-                if isDragPrimed {
-                    Rectangle()
-                        .fill(Color.white.opacity(0.1))
-                }
             }
         }
-        .clipShape(RoundedRectangle(cornerRadius: 18))
-        .overlay {
-            if isDragPrimed {
-                RoundedRectangle(cornerRadius: 18)
-                    .stroke(
-                        LinearGradient(
-                            colors: [.white.opacity(0.4), .white.opacity(0.1)],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        ),
-                        lineWidth: 1.5
-                    )
-            }
-        }
+        .clipShape(RoundedRectangle(cornerRadius: 12))
         .shadow(
-            color: isDragPrimed ? .white.opacity(0.2) : .black.opacity(0.2),
-            radius: isDragPrimed ? 8 : 12,
-            y: isDragPrimed ? 3 : 6
+            color: .black.opacity(0.2),
+            radius: 12,
+            y: 6
         )
-        .animation(.easeInOut(duration: 0.2), value: isDragPrimed)
         .onAppear {
             isSearchFocused = true
         }

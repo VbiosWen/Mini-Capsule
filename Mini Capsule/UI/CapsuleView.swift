@@ -20,19 +20,14 @@ struct CapsuleView: View {
     @State private var hoverWorkItem: DispatchWorkItem?
     @State private var isExpandedReady = false
 
-    // Long-press drag state
-    @State private var isDragPrimed = false
+    // Drag state — driven by CapsuleWindowController NSEvent monitor
     @State private var isDragging = false
-    @State private var dragStartFrame: NSRect?
-    @State private var dragWorkItem: DispatchWorkItem?
-    @State private var previousDragTranslation: CGSize?
 
     var body: some View {
         Group {
             if isExpanded {
                 CapsuleExpandedView(
                     searchText: $searchText,
-                    isDragPrimed: isDragPrimed,
                     isExpandedReady: isExpandedReady,
                     onItemTap: { item in
                         PasteService.copyToClipboard(item)
@@ -52,19 +47,17 @@ struct CapsuleView: View {
                 CapsuleCollapsedView(
                     latestItem: items.first,
                     isCapturing: isCapturing,
-                    isDragPrimed: isDragPrimed,
                     collapsedStyle: UserDefaults.standard.string(forKey: "collapsedStyle") ?? "capsule"
                 )
             }
         }
-        .simultaneousGesture(windowDragGesture)
         .opacity(windowOpacity)
         .animation(.easeInOut(duration: 0.3), value: windowOpacity)
         .onHover { hovering in
             hoverWorkItem?.cancel()
 
             // Don't expand/collapse while a drag is in progress
-            if dragWorkItem != nil || isDragPrimed || isDragging { return }
+            if isDragging { return }
 
             if hovering {
                 isExpandedReady = false
@@ -96,6 +89,18 @@ struct CapsuleView: View {
                 DispatchQueue.main.asyncAfter(deadline: .now() + effectiveCollapseDelay, execute: workItem)
             }
         }
+        .onReceive(NotificationCenter.default.publisher(for: .capsuleDragStarted)) { _ in
+            isDragging = true
+            if isExpanded {
+                withAnimation(.spring(response: 0.25, dampingFraction: 0.8)) {
+                    isExpanded = false
+                }
+                postExpandedNotification()
+            }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .capsuleDragEnded)) { _ in
+            isDragging = false
+        }
         .onChange(of: items.first?.id) { _, _ in
             isCapturing = true
             DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
@@ -109,73 +114,6 @@ struct CapsuleView: View {
         let effectiveUnfocused = unfocusedOpacity > 0 ? unfocusedOpacity : 0.6
         // If expanded (hovering), fully opaque. Otherwise use unfocused setting.
         return isExpanded ? 1.0 : effectiveUnfocused
-    }
-
-    private var windowDragGesture: some Gesture {
-        DragGesture(minimumDistance: 0)
-            .onChanged { value in
-                // Start 0.5s delay on first drag event
-                if dragWorkItem == nil && !isDragPrimed && !isDragging {
-                    // Cancel any pending hover expansion
-                    hoverWorkItem?.cancel()
-                    if isExpanded {
-                        withAnimation(.spring(response: 0.25, dampingFraction: 0.8)) {
-                            isExpanded = false
-                        }
-                        postExpandedNotification()
-                    }
-
-                    let workItem = DispatchWorkItem {
-                        isDragPrimed = true
-                    }
-                    dragWorkItem = workItem
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5, execute: workItem)
-                }
-
-                guard let panel = NSApp.windows.first(where: { $0 is CapsulePanel }) else { return }
-
-                // Wait for drag to prime before moving
-                if !isDragPrimed {
-                    return
-                }
-
-                // Capture current translation as baseline on the first frame after priming
-                if previousDragTranslation == nil {
-                    previousDragTranslation = value.translation
-                    return
-                }
-
-                // Incremental delta from previous frame — no jump
-                let prev = previousDragTranslation ?? .zero
-                let deltaX = value.translation.width - prev.width
-                let deltaY = value.translation.height - prev.height
-                var newFrame = panel.frame
-                newFrame.origin.x += deltaX
-                newFrame.origin.y -= deltaY
-                panel.setFrame(newFrame, display: true)
-                previousDragTranslation = value.translation
-                isDragging = true
-            }
-            .onEnded { _ in
-                dragWorkItem?.cancel()
-                dragWorkItem = nil
-
-                if isDragging {
-                    if let panel = NSApp.windows.first(where: { $0 is CapsulePanel }) {
-                        UserDefaults.standard.set([
-                            "x": panel.frame.origin.x,
-                            "y": panel.frame.origin.y,
-                            "w": panel.frame.size.width,
-                            "h": panel.frame.size.height
-                        ], forKey: "CapsuleWindowFrame")
-                    }
-                }
-
-                isDragPrimed = false
-                isDragging = false
-                dragStartFrame = nil
-                previousDragTranslation = nil
-            }
     }
 
     private func postExpandedNotification() {
