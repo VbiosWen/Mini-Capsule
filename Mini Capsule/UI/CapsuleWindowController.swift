@@ -27,15 +27,14 @@ final class CapsuleWindowController: NSWindowController, NSWindowDelegate {
     private static let expandedSize = NSSize(width: 280, height: 360)
 
     private var currentCollapsedSize: NSSize {
-        let style = UserDefaults.standard.string(forKey: "collapsedStyle") ?? "capsule"
-        return style == "dot" ? Self.dotCollapsedSize : Self.capsuleCollapsedSize
+        return settingsStore.collapsedStyle == "dot" ? Self.dotCollapsedSize : Self.capsuleCollapsedSize
     }
 
     init(modelContainer: ModelContainer, settingsStore: SettingsStore) {
         self.modelContainer = modelContainer
         self.settingsStore = settingsStore
 
-        let savedFrame = Self.loadFrame()
+        let savedFrame = Self.loadFrame(style: settingsStore.collapsedStyle)
 
         let panel = CapsulePanel(
             contentRect: savedFrame,
@@ -70,8 +69,7 @@ final class CapsuleWindowController: NSWindowController, NSWindowDelegate {
         panel.contentView?.wantsLayer = true
         // Clip window to capsule shape
         panel.contentView?.layer?.masksToBounds = true
-        let initialStyle = UserDefaults.standard.string(forKey: "collapsedStyle") ?? "capsule"
-        panel.contentView?.layer?.cornerRadius = initialStyle == "dot" ? 6 : 18
+        panel.contentView?.layer?.cornerRadius = settingsStore.collapsedStyle == "dot" ? 6 : 18
 
         observeExpandedState()
         startDragMonitoring()
@@ -174,8 +172,7 @@ final class CapsuleWindowController: NSWindowController, NSWindowDelegate {
                 if isExpanded {
                     cornerRadius = 12
                 } else {
-                    let style = UserDefaults.standard.string(forKey: "collapsedStyle") ?? "capsule"
-                    cornerRadius = style == "dot" ? 6 : 18
+                    cornerRadius = self.settingsStore.collapsedStyle == "dot" ? 6 : 18
                 }
                 window.contentView?.layer?.cornerRadius = cornerRadius
 
@@ -207,12 +204,11 @@ final class CapsuleWindowController: NSWindowController, NSWindowDelegate {
                 guard let self = self, let window = self.window else { return }
                 // If collapsed, update cornerRadius to match current style
                 if !self.isExpanded {
-                    let style = UserDefaults.standard.string(forKey: "collapsedStyle") ?? "capsule"
-                    let radius: CGFloat = style == "dot" ? 6 : 18
+                    let radius: CGFloat = self.settingsStore.collapsedStyle == "dot" ? 6 : 18
                     window.contentView?.layer?.cornerRadius = radius
 
                     // Also resize window to match new collapsed size
-                    let size = style == "dot" ? Self.dotCollapsedSize : Self.capsuleCollapsedSize
+                    let size = self.settingsStore.collapsedStyle == "dot" ? Self.dotCollapsedSize : Self.capsuleCollapsedSize
                     if window.frame.size != size {
                         let newFrame = NSRect(
                             x: window.frame.midX - size.width / 2,
@@ -237,8 +233,7 @@ final class CapsuleWindowController: NSWindowController, NSWindowDelegate {
                       let window = self.window,
                       let screen = NSScreen.main else { return }
 
-                let style = UserDefaults.standard.string(forKey: "collapsedStyle") ?? "capsule"
-                let size = style == "dot" ? Self.dotCollapsedSize : Self.capsuleCollapsedSize
+                let size = self.settingsStore.collapsedStyle == "dot" ? Self.dotCollapsedSize : Self.capsuleCollapsedSize
                 let screenWidth = screen.visibleFrame.width
                 let screenHeight = screen.visibleFrame.maxY
 
@@ -285,8 +280,7 @@ final class CapsuleWindowController: NSWindowController, NSWindowDelegate {
         UserDefaults.standard.set(frameDict, forKey: Self.frameKey)
     }
 
-    private static func loadFrame() -> NSRect {
-        let style = UserDefaults.standard.string(forKey: "collapsedStyle") ?? "capsule"
+    private static func loadFrame(style: String) -> NSRect {
         let size = style == "dot" ? dotCollapsedSize : capsuleCollapsedSize
 
         guard let screen = NSScreen.main else {
