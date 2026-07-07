@@ -235,7 +235,7 @@ final class CapsuleWindowController: NSWindowController, NSWindowDelegate {
                 let newFrame = NSRect(x: x, y: y, width: size.width, height: size.height)
 
                 window.setFrame(newFrame, display: true, animate: true)
-                UserDefaults.standard.removeObject(forKey: SettingsKey.capsuleWindowFrameKey)
+                UserDefaults.standard.removeObject(forKey: SettingsKey.capsuleWindowFrame.rawValue)
             }
         )
 
@@ -270,7 +270,7 @@ final class CapsuleWindowController: NSWindowController, NSWindowDelegate {
             "w": frame.size.width,
             "h": frame.size.height
         ]
-        UserDefaults.standard.set(frameDict, forKey: SettingsKey.capsuleWindowFrameKey)
+        UserDefaults.standard.set(frameDict, forKey: SettingsKey.capsuleWindowFrame.rawValue)
     }
 
     private static func loadFrame(style: String) -> NSRect {
@@ -286,7 +286,7 @@ final class CapsuleWindowController: NSWindowController, NSWindowDelegate {
         var y = screenHeight - size.height - 40
 
         // Restore saved position, clamping to visible screen bounds
-        if let dict = UserDefaults.standard.dictionary(forKey: SettingsKey.capsuleWindowFrameKey) as? [String: CGFloat],
+        if let dict = UserDefaults.standard.dictionary(forKey: SettingsKey.capsuleWindowFrame.rawValue) as? [String: CGFloat],
            let savedX = dict["x"], let savedY = dict["y"] {
             let screenFrame = screen.visibleFrame
             let clampedX = min(max(savedX, screenFrame.minX), screenFrame.maxX - size.width)

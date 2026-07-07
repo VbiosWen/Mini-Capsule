@@ -106,7 +106,7 @@ struct GeneralSettingsView: View {
     }
 
     static func resetCapsulePosition() {
-        UserDefaults.standard.removeObject(forKey: SettingsKey.capsuleWindowFrameKey)
+        UserDefaults.standard.removeObject(forKey: SettingsKey.capsuleWindowFrame.rawValue)
         NotificationCenter.default.post(name: .resetCapsulePosition, object: nil)
     }
 

@@ -14,7 +14,8 @@ struct SettingsStoreTests {
         "showHideShortcut", "quickPasteShortcut", "togglePinShortcut", "iCloudSyncEnabled",
         "launchAtLogin", "showInMenuBar", "showFloatingPanel", "collapsedStyle",
         "hoverExpandDelay", "hoverCollapseDelay",
-        "panelOpacityUnfocused", "backgroundImageData", "dotColorMode", "dotCustomColor"
+        "panelOpacityUnfocused", "backgroundImageData", "dotColorMode", "dotCustomColor",
+        "capsuleWindowFrame"
     ]
 
     @Test func defaults() async throws {
@@ -331,11 +332,11 @@ struct CapsuleWindowControllerTests {
         UserDefaults.standard.set([
             "x": CGFloat(100), "y": CGFloat(200),
             "w": CGFloat(200), "h": CGFloat(36)
-        ], forKey: "CapsuleWindowFrame")
+        ], forKey: SettingsKey.capsuleWindowFrame.rawValue)
 
         NotificationCenter.default.post(name: .resetCapsulePosition, object: nil)
 
-        #expect(UserDefaults.standard.dictionary(forKey: "CapsuleWindowFrame") == nil)
+        #expect(UserDefaults.standard.dictionary(forKey: SettingsKey.capsuleWindowFrame.rawValue) == nil)
     }
 
     @Test func resetPositionUpdatesWindowFrame() async throws {
@@ -350,7 +351,7 @@ struct CapsuleWindowControllerTests {
         UserDefaults.standard.set([
             "x": CGFloat(100), "y": CGFloat(200),
             "w": CGFloat(200), "h": CGFloat(36)
-        ], forKey: "CapsuleWindowFrame")
+        ], forKey: SettingsKey.capsuleWindowFrame.rawValue)
         let oldFrame = NSRect(x: 100, y: 200, width: 200, height: 36)
         window.setFrame(oldFrame, display: false)
 
@@ -544,7 +545,7 @@ struct GeneralSettingsViewTests {
         UserDefaults.standard.set([
             "x": CGFloat(100), "y": CGFloat(200),
             "w": CGFloat(200), "h": CGFloat(36)
-        ], forKey: "CapsuleWindowFrame")
+        ], forKey: SettingsKey.capsuleWindowFrame.rawValue)
 
         // When: the static reset method is called
         try await confirmation(expectedCount: 1) { posted in
@@ -559,7 +560,7 @@ struct GeneralSettingsViewTests {
         }
 
         // Then: the saved frame key is removed
-        #expect(UserDefaults.standard.dictionary(forKey: "CapsuleWindowFrame") == nil)
+        #expect(UserDefaults.standard.dictionary(forKey: SettingsKey.capsuleWindowFrame.rawValue) == nil)
     }
 }
 

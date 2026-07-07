@@ -9,7 +9,7 @@ struct SettingsKeyTests {
     }
 
     @Test func keyCountIsCorrect() async throws {
-        #expect(SettingsKey.allCases.count == 19, "Expected 19 settings keys")
+        #expect(SettingsKey.allCases.count == 20, "Expected 20 settings keys")
     }
 
     @Test func keysMatchExpectedValues() async throws {
@@ -20,9 +20,15 @@ struct SettingsKeyTests {
             "iCloudSyncEnabled", "launchAtLogin", "showInMenuBar",
             "showFloatingPanel", "collapsedStyle", "hoverExpandDelay",
             "hoverCollapseDelay", "panelOpacityUnfocused",
-            "backgroundImageData", "dotColorMode", "dotCustomColor"
+            "backgroundImageData", "dotColorMode", "dotCustomColor",
+            "capsuleWindowFrame"
         ]
         let actual = Set(SettingsKey.allCases.map(\.rawValue))
         #expect(actual == expected, "SettingsKey cases must match expected key strings")
+    }
+
+    @Test func allCasesContainsCapsuleWindowFrame() async throws {
+        let keys = SettingsKey.allCases.map(\.rawValue)
+        #expect(keys.contains("capsuleWindowFrame"))
     }
 }

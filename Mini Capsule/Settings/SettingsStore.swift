@@ -83,6 +83,9 @@ final class SettingsStore: ObservableObject, SettingsProtocol {
     @AppStorage(SettingsKey.dotCustomColor.rawValue)
     var dotCustomColor: String = "#007AFF" { didSet { objectWillChange.send() } }
 
+    @AppStorage(SettingsKey.capsuleWindowFrame.rawValue)
+    var capsuleWindowFrame: Data = Data() { didSet { objectWillChange.send() } }
+
     // MARK: - Actions
 
     func resetAll() {
@@ -105,6 +108,7 @@ final class SettingsStore: ObservableObject, SettingsProtocol {
         backgroundImageData = Data()
         dotColorMode = "auto"
         dotCustomColor = "#007AFF"
+        capsuleWindowFrame = Data()
     }
 
     func exportData(context: ModelContext) -> Data? {
