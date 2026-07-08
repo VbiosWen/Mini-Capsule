@@ -17,268 +17,196 @@ private struct ClipItemExport: Codable {
 @MainActor
 @Observable
 final class SettingsStore: SettingsProtocol {
+    // MARK: - Internal State
+
+    private var data: SettingsData
+    private let persistence = SettingsPersistence()
+
+    // MARK: - Init
+
+    init(data: SettingsData = SettingsData()) {
+        self.data = data
+    }
+
+    // MARK: - Persistence
+
+    /// Schedule an async write of the current settings snapshot to disk.
+    private func persist() {
+        let snapshot = data
+        Task { [snapshot] in
+            try? await persistence.save(snapshot)
+        }
+    }
+
     // MARK: - Clipboard
 
     var historyMaxCount: Int {
-        get {
-            access(keyPath: \.historyMaxCount)
-            return UserDefaults.standard.object(forKey: SettingsKey.historyMaxCount.rawValue) as? Int ?? 200
-        }
+        get { data.historyMaxCount }
         set {
-            withMutation(keyPath: \.historyMaxCount) {
-                UserDefaults.standard.set(newValue, forKey: SettingsKey.historyMaxCount.rawValue)
-            }
+            data.historyMaxCount = newValue
+            persist()
         }
     }
 
     var imageMaxSizeMB: Int {
-        get {
-            access(keyPath: \.imageMaxSizeMB)
-            return UserDefaults.standard.object(forKey: SettingsKey.imageMaxSizeMB.rawValue) as? Int ?? 2
-        }
+        get { data.imageMaxSizeMB }
         set {
-            withMutation(keyPath: \.imageMaxSizeMB) {
-                UserDefaults.standard.set(newValue, forKey: SettingsKey.imageMaxSizeMB.rawValue)
-            }
+            data.imageMaxSizeMB = newValue
+            persist()
         }
     }
 
     var pollingInterval: Double {
-        get {
-            access(keyPath: \.pollingInterval)
-            return UserDefaults.standard.object(forKey: SettingsKey.pollingInterval.rawValue) as? Double ?? 0.5
-        }
+        get { data.pollingInterval }
         set {
-            withMutation(keyPath: \.pollingInterval) {
-                UserDefaults.standard.set(newValue, forKey: SettingsKey.pollingInterval.rawValue)
-            }
+            data.pollingInterval = newValue
+            persist()
         }
     }
 
     var cleanupOnStartup: Bool {
-        get {
-            access(keyPath: \.cleanupOnStartup)
-            return UserDefaults.standard.object(forKey: SettingsKey.cleanupOnStartup.rawValue) as? Bool ?? true
-        }
+        get { data.cleanupOnStartup }
         set {
-            withMutation(keyPath: \.cleanupOnStartup) {
-                UserDefaults.standard.set(newValue, forKey: SettingsKey.cleanupOnStartup.rawValue)
-            }
+            data.cleanupOnStartup = newValue
+            persist()
         }
     }
 
     var dedupEnabled: Bool {
-        get {
-            access(keyPath: \.dedupEnabled)
-            return UserDefaults.standard.object(forKey: SettingsKey.dedupEnabled.rawValue) as? Bool ?? true
-        }
+        get { data.dedupEnabled }
         set {
-            withMutation(keyPath: \.dedupEnabled) {
-                UserDefaults.standard.set(newValue, forKey: SettingsKey.dedupEnabled.rawValue)
-            }
+            data.dedupEnabled = newValue
+            persist()
         }
     }
 
     // MARK: - Shortcuts
 
     var showHideShortcut: String {
-        get {
-            access(keyPath: \.showHideShortcut)
-            return UserDefaults.standard.string(forKey: SettingsKey.showHideShortcut.rawValue) ?? "cmd+shift+V"
-        }
+        get { data.showHideShortcut }
         set {
-            withMutation(keyPath: \.showHideShortcut) {
-                UserDefaults.standard.set(newValue, forKey: SettingsKey.showHideShortcut.rawValue)
-            }
+            data.showHideShortcut = newValue
+            persist()
         }
     }
 
     var quickPasteShortcut: String {
-        get {
-            access(keyPath: \.quickPasteShortcut)
-            return UserDefaults.standard.string(forKey: SettingsKey.quickPasteShortcut.rawValue) ?? "cmd+shift+C"
-        }
+        get { data.quickPasteShortcut }
         set {
-            withMutation(keyPath: \.quickPasteShortcut) {
-                UserDefaults.standard.set(newValue, forKey: SettingsKey.quickPasteShortcut.rawValue)
-            }
+            data.quickPasteShortcut = newValue
+            persist()
         }
     }
 
     var togglePinShortcut: String {
-        get {
-            access(keyPath: \.togglePinShortcut)
-            return UserDefaults.standard.string(forKey: SettingsKey.togglePinShortcut.rawValue) ?? ""
-        }
+        get { data.togglePinShortcut }
         set {
-            withMutation(keyPath: \.togglePinShortcut) {
-                UserDefaults.standard.set(newValue, forKey: SettingsKey.togglePinShortcut.rawValue)
-            }
+            data.togglePinShortcut = newValue
+            persist()
         }
     }
 
     // MARK: - Advanced
 
     var iCloudSyncEnabled: Bool {
-        get {
-            access(keyPath: \.iCloudSyncEnabled)
-            return UserDefaults.standard.object(forKey: SettingsKey.iCloudSyncEnabled.rawValue) as? Bool ?? false
-        }
+        get { data.iCloudSyncEnabled }
         set {
-            withMutation(keyPath: \.iCloudSyncEnabled) {
-                UserDefaults.standard.set(newValue, forKey: SettingsKey.iCloudSyncEnabled.rawValue)
-            }
+            data.iCloudSyncEnabled = newValue
+            persist()
         }
     }
 
     // MARK: - General
 
     var launchAtLogin: Bool {
-        get {
-            access(keyPath: \.launchAtLogin)
-            return UserDefaults.standard.object(forKey: SettingsKey.launchAtLogin.rawValue) as? Bool ?? false
-        }
+        get { data.launchAtLogin }
         set {
-            withMutation(keyPath: \.launchAtLogin) {
-                UserDefaults.standard.set(newValue, forKey: SettingsKey.launchAtLogin.rawValue)
-            }
+            data.launchAtLogin = newValue
+            persist()
         }
     }
 
     var showInMenuBar: Bool {
-        get {
-            access(keyPath: \.showInMenuBar)
-            return UserDefaults.standard.object(forKey: SettingsKey.showInMenuBar.rawValue) as? Bool ?? true
-        }
+        get { data.showInMenuBar }
         set {
-            withMutation(keyPath: \.showInMenuBar) {
-                UserDefaults.standard.set(newValue, forKey: SettingsKey.showInMenuBar.rawValue)
-            }
+            data.showInMenuBar = newValue
+            persist()
         }
     }
 
     var showFloatingPanel: Bool {
-        get {
-            access(keyPath: \.showFloatingPanel)
-            return UserDefaults.standard.object(forKey: SettingsKey.showFloatingPanel.rawValue) as? Bool ?? true
-        }
+        get { data.showFloatingPanel }
         set {
-            withMutation(keyPath: \.showFloatingPanel) {
-                UserDefaults.standard.set(newValue, forKey: SettingsKey.showFloatingPanel.rawValue)
-            }
+            data.showFloatingPanel = newValue
+            persist()
         }
     }
 
     var collapsedStyle: String {
-        get {
-            access(keyPath: \.collapsedStyle)
-            return UserDefaults.standard.string(forKey: SettingsKey.collapsedStyle.rawValue) ?? "capsule"
-        }
+        get { data.collapsedStyle }
         set {
-            withMutation(keyPath: \.collapsedStyle) {
-                UserDefaults.standard.set(newValue, forKey: SettingsKey.collapsedStyle.rawValue)
-            }
+            data.collapsedStyle = newValue
+            persist()
         }
     }
 
     var hoverExpandDelay: Double {
-        get {
-            access(keyPath: \.hoverExpandDelay)
-            return UserDefaults.standard.object(forKey: SettingsKey.hoverExpandDelay.rawValue) as? Double ?? 0.3
-        }
+        get { data.hoverExpandDelay }
         set {
-            withMutation(keyPath: \.hoverExpandDelay) {
-                UserDefaults.standard.set(newValue, forKey: SettingsKey.hoverExpandDelay.rawValue)
-            }
+            data.hoverExpandDelay = newValue
+            persist()
         }
     }
 
     var hoverCollapseDelay: Double {
-        get {
-            access(keyPath: \.hoverCollapseDelay)
-            return UserDefaults.standard.object(forKey: SettingsKey.hoverCollapseDelay.rawValue) as? Double ?? 1.0
-        }
+        get { data.hoverCollapseDelay }
         set {
-            withMutation(keyPath: \.hoverCollapseDelay) {
-                UserDefaults.standard.set(newValue, forKey: SettingsKey.hoverCollapseDelay.rawValue)
-            }
+            data.hoverCollapseDelay = newValue
+            persist()
         }
     }
 
     // MARK: - Appearance
 
     var panelOpacityUnfocused: Double {
-        get {
-            access(keyPath: \.panelOpacityUnfocused)
-            return UserDefaults.standard.object(forKey: SettingsKey.panelOpacityUnfocused.rawValue) as? Double ?? 0.6
-        }
+        get { data.panelOpacityUnfocused }
         set {
-            withMutation(keyPath: \.panelOpacityUnfocused) {
-                UserDefaults.standard.set(newValue, forKey: SettingsKey.panelOpacityUnfocused.rawValue)
-            }
+            data.panelOpacityUnfocused = newValue
+            persist()
         }
     }
 
     var backgroundImageData: Data {
-        get {
-            access(keyPath: \.backgroundImageData)
-            return UserDefaults.standard.data(forKey: SettingsKey.backgroundImageData.rawValue) ?? Data()
-        }
+        get { data.backgroundImageData }
         set {
-            withMutation(keyPath: \.backgroundImageData) {
-                UserDefaults.standard.set(newValue, forKey: SettingsKey.backgroundImageData.rawValue)
-            }
+            data.backgroundImageData = newValue
+            persist()
         }
     }
 
     var ringDiameter: Double {
-        get {
-            access(keyPath: \.ringDiameter)
-            return UserDefaults.standard.object(forKey: SettingsKey.ringDiameter.rawValue) as? Double ?? 30
-        }
+        get { data.ringDiameter }
         set {
-            withMutation(keyPath: \.ringDiameter) {
-                UserDefaults.standard.set(newValue, forKey: SettingsKey.ringDiameter.rawValue)
-            }
+            data.ringDiameter = newValue
+            persist()
         }
     }
 
     // MARK: - Window Frame
 
     var capsuleWindowFrame: Data {
-        get {
-            access(keyPath: \.capsuleWindowFrame)
-            return UserDefaults.standard.data(forKey: SettingsKey.capsuleWindowFrame.rawValue) ?? Data()
-        }
+        get { data.capsuleWindowFrame }
         set {
-            withMutation(keyPath: \.capsuleWindowFrame) {
-                UserDefaults.standard.set(newValue, forKey: SettingsKey.capsuleWindowFrame.rawValue)
-            }
+            data.capsuleWindowFrame = newValue
+            persist()
         }
     }
 
     // MARK: - Actions
 
     func resetAll() {
-        historyMaxCount = 200
-        imageMaxSizeMB = 2
-        pollingInterval = 0.5
-        cleanupOnStartup = true
-        dedupEnabled = true
-        showHideShortcut = "cmd+shift+V"
-        quickPasteShortcut = "cmd+shift+C"
-        togglePinShortcut = ""
-        iCloudSyncEnabled = false
-        launchAtLogin = false
-        showInMenuBar = true
-        showFloatingPanel = true
-        collapsedStyle = "capsule"
-        hoverExpandDelay = 0.3
-        hoverCollapseDelay = 1.0
-        panelOpacityUnfocused = 0.6
-        backgroundImageData = Data()
-        ringDiameter = 30
-        capsuleWindowFrame = Data()
+        data = SettingsData()
+        persist()
     }
 
     func exportData(context: ModelContext) -> Data? {
