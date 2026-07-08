@@ -46,7 +46,7 @@ class CapsuleAppDelegate: NSObject, NSApplicationDelegate {
         // Frequency cleanup on startup
         FrequencyCleanupService.performCleanup(
             context: Self.sharedModelContainer.mainContext,
-            keepCount: 50,
+            keepCount: nil,
             settings: settingsStore
         )
 

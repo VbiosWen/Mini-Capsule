@@ -8,10 +8,7 @@ enum FrequencyCleanupService {
 
         guard let items = try? context.fetch(allItems) else { return }
 
-        let keep = keepCount ?? {
-            let count = settings?.historyMaxCount ?? 200
-            return count >= 50 ? min(50, count) : 50
-        }()
+        let keep = keepCount ?? max(settings?.historyMaxCount ?? 200, 1)
 
         let sorted = items.sorted { a, b in
             if a.isPinned != b.isPinned {
