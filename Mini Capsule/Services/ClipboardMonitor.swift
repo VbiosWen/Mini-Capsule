@@ -95,7 +95,7 @@ final class ClipboardMonitor: ObservableObject {
                 }
 
                 // Enforce max count cap
-                enforceCap(context: context, maxCount: maxHistoryCount)
+                Self.enforceCap(context: context, maxCount: maxHistoryCount)
 
                 let sourceApp = NSWorkspace.shared.frontmostApplication?.bundleIdentifier
                 let appName = NSWorkspace.shared.frontmostApplication?.localizedName
@@ -114,7 +114,7 @@ final class ClipboardMonitor: ObservableObject {
                 return
             } else {
                 // No dedup — always insert
-                enforceCap(context: context, maxCount: maxHistoryCount)
+                Self.enforceCap(context: context, maxCount: maxHistoryCount)
                 let sourceApp = NSWorkspace.shared.frontmostApplication?.bundleIdentifier
                 let appName = NSWorkspace.shared.frontmostApplication?.localizedName
                 let fileName = content.fileName ?? "\(appName ?? "未知")-\(UUID().uuidString.prefix(4))"
@@ -149,7 +149,7 @@ final class ClipboardMonitor: ObservableObject {
         }
 
         // Enforce max count cap
-        enforceCap(context: context, maxCount: maxHistoryCount)
+        Self.enforceCap(context: context, maxCount: maxHistoryCount)
 
         let item = ClipItem(
             timestamp: Date(),
@@ -230,17 +230,15 @@ final class ClipboardMonitor: ObservableObject {
         return jpeg
     }
 
-    private func enforceCap(context: ModelContext, maxCount: Int) {
-        let allItems = FetchDescriptor<ClipItem>(sortBy: [])
-        guard let items = try? context.fetch(allItems),
+    static func enforceCap(context: ModelContext, maxCount: Int) {
+        guard let items = try? context.fetch(FetchDescriptor<ClipItem>(sortBy: [])),
               items.count >= maxCount else { return }
-
-        let sorted = items.sorted { a, b in
-            if a.isPinned != b.isPinned { return a.isPinned }
-            return a.pasteCount > b.pasteCount
-        }
-        let toDelete = sorted.filter { !$0.isPinned }.suffix(from: maxCount)
-        for item in toDelete {
+        // Called before inserting the new item: remove enough to leave room for one.
+        let overflow = items.count - maxCount + 1
+        let deletable = items
+            .filter { !$0.isPinned }
+            .sorted { $0.pasteCount < $1.pasteCount }   // least-used first
+        for item in deletable.prefix(overflow) {        // prefix() is safe if overflow > count
             context.delete(item)
         }
     }
