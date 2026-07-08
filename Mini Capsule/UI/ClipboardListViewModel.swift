@@ -7,12 +7,14 @@ enum ContentFilter: String, CaseIterable {
     case all = "全部"
     case text = "文本"
     case image = "图片"
+    case file = "文件"
 
     var systemImage: String {
         switch self {
         case .all: return "square.stack"
         case .text: return "doc.text"
         case .image: return "photo"
+        case .file: return "doc"
         }
     }
 }
@@ -61,6 +63,8 @@ final class ClipboardListViewModel {
             typeFiltered = allItems.filter { $0.contentTypeRaw == "text" }
         case .image:
             typeFiltered = allItems.filter { $0.contentTypeRaw == "image" }
+        case .file:
+            typeFiltered = allItems.filter { $0.contentTypeRaw == "file" }
         }
 
         let searched: [ClipItem]
