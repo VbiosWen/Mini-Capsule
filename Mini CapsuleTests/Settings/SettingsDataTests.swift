@@ -76,6 +76,17 @@ struct SettingsDataTests {
         #expect(decoded.backgroundImageData == original.backgroundImageData)
     }
 
+    @Test func decodePartialJSONFillsMissingKeysWithDefaults() throws {
+        // Simulates an OLD settings.json written before newer fields existed.
+        let partial = #"{"historyMaxCount": 99, "ringDiameter": 45}"#.data(using: .utf8)!
+        let decoded = try JSONDecoder().decode(SettingsData.self, from: partial)
+        #expect(decoded.historyMaxCount == 99)          // present key preserved
+        #expect(decoded.ringDiameter == 45)             // present key preserved
+        #expect(decoded.pollingInterval == 0.5)         // missing -> default
+        #expect(decoded.showInMenuBar == true)          // missing -> default
+        #expect(decoded.dedupEnabled == true)           // missing -> default
+    }
+
     @Test func equatableConformance() async throws {
         let a = SettingsData()
         let b = SettingsData()
