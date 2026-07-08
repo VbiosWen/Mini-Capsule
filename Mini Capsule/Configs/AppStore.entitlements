@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <!-- App Sandbox (required for Mac App Store) -->
+    <key>com.apple.security.app-sandbox</key>
+    <true/>
+    <!-- User-selected file access (save/open clipboard items) -->
+    <key>com.apple.security.files.user-selected.read-write</key>
+    <true/>
+    <!-- Network access (push notifications) -->
+    <key>com.apple.security.network.client</key>
+    <true/>
+    <!-- Push notifications (production) -->
+    <key>aps-environment</key>
+    <string>production</string>
+    <!-- CloudKit -->
+    <key>com.apple.developer.icloud-container-identifiers</key>
+    <array>
+        <string>iCloud.$(CFBundleIdentifier)</string>
+    </array>
+    <key>com.apple.developer.icloud-services</key>
+    <array>
+        <string>CloudKit</string>
+    </array>
+</dict>
+</plist>
