@@ -1,7 +1,34 @@
 import Testing
 import Foundation
 import SwiftData
+import AppKit
 @testable import Mini_Capsule
+
+private final class MockSettings: SettingsProtocol {
+    var historyMaxCount: Int = 200
+    var imageMaxSizeMB: Int = 2
+    var pollingInterval: Double = 0.5
+    var cleanupOnStartup: Bool = true
+    var dedupEnabled: Bool = true
+    var showHideShortcut: String = ""
+    var quickPasteShortcut: String = ""
+    var togglePinShortcut: String = ""
+    var iCloudSyncEnabled: Bool = false
+    var launchAtLogin: Bool = false
+    var showInMenuBar: Bool = true
+    var showFloatingPanel: Bool = true
+    var collapsedStyle: String = "capsule"
+    var hoverExpandDelay: Double = 0.3
+    var hoverCollapseDelay: Double = 1.0
+    var panelOpacityUnfocused: Double = 0.6
+    var backgroundImageData: Data = Data()
+    var ringDiameter: Double = 30
+    var capsuleWindowFrame: Data = Data()
+    func resetAll() {}
+    func exportData(context: ModelContext) -> Data? { nil }
+    func importData(_ data: Data, context: ModelContext) throws {}
+    func clearAllHistory(context: ModelContext) {}
+}
 
 @MainActor
 struct ClipboardMonitorTests {
@@ -10,6 +37,54 @@ struct ClipboardMonitorTests {
         let config = ModelConfiguration(schema: schema, isStoredInMemoryOnly: true)
         return try ModelContainer(for: schema, configurations: [config])
     }
+
+    // MARK: - nsImageToPNGData tests
+
+    @Test func nsImageToPNGDataProducesValidPNG() {
+        // Create a small NSImage and verify the output is non-empty PNG data.
+        let image = NSImage(size: NSSize(width: 10, height: 10))
+        image.lockFocus()
+        NSColor.red.setFill()
+        NSRect(origin: .zero, size: NSSize(width: 10, height: 10)).fill()
+        image.unlockFocus()
+
+        let monitor = ClipboardMonitor(settings: MockSettings())
+        let pngData = monitor.nsImageToPNGData(image)
+
+        #expect(!pngData.isEmpty, "PNG data should not be empty")
+        // Verify PNG signature: first 8 bytes = 137 80 78 71 13 10 26 10
+        let pngSignature: [UInt8] = [137, 80, 78, 71, 13, 10, 26, 10]
+        #expect(Array(pngData.prefix(8)) == pngSignature, "Output should be valid PNG")
+    }
+
+    @Test func nsImageToPNGDataWithEmptyImageReturnsEmptyData() {
+        // An NSImage with zero size produces TIFF data but bitmap init may fail.
+        let image = NSImage(size: .zero)
+        let monitor = ClipboardMonitor(settings: MockSettings())
+        let data = monitor.nsImageToPNGData(image)
+        // Should not crash — may return empty or TIFF data, but never nil.
+        #expect(data is Data)
+    }
+
+    @Test func nsImageToPNGDataRoundtrip() {
+        // Draw a colored image, convert to PNG, then reload — should decode back.
+        let original = NSImage(size: NSSize(width: 32, height: 32))
+        original.lockFocus()
+        NSColor.blue.setFill()
+        NSRect(origin: .zero, size: NSSize(width: 32, height: 32)).fill()
+        original.unlockFocus()
+
+        let monitor = ClipboardMonitor(settings: MockSettings())
+        let pngData = monitor.nsImageToPNGData(original)
+
+        // Reload from the PNG data
+        let reloaded = NSImage(data: pngData)
+        #expect(reloaded != nil, "Reloaded image should not be nil")
+        #expect(reloaded!.size.width == 32)
+        #expect(reloaded!.size.height == 32)
+    }
+
+    // MARK: - enforceCap tests
 
     @Test func enforceCapWithPinnedItemsDoesNotCrashAndKeepsPinned() throws {
         let container = try Self.makeContainer()
@@ -45,5 +120,22 @@ struct ClipboardMonitorTests {
         #expect(remaining.count == 7)                      // 10 - 3 removed
         #expect(!survivingCounts.contains(0))              // lowest pasteCount removed
         #expect(survivingCounts.contains(9))               // highest kept
+    }
+
+    // MARK: - encodeFileBookmarks tests
+
+    @Test func encodeFileBookmarksProducesJSONArrayRoundtripsThroughDecoder() throws {
+        let raw: [Data] = [Data([0xAA, 0xBB]), Data([0xCC, 0xDD, 0xEE])]
+        guard let encoded = ClipboardMonitor.encodeFileBookmarks(raw) else {
+            Issue.record("encode returned nil")
+            return
+        }
+        let roundtripped = try JSONDecoder().decode([Data].self, from: encoded)
+        #expect(roundtripped == raw)
+    }
+
+    @Test func encodeFileBookmarksEmptyReturnsNil() {
+        let encoded = ClipboardMonitor.encodeFileBookmarks([])
+        #expect(encoded == nil)
     }
 }

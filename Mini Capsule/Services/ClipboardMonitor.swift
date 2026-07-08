@@ -155,6 +155,7 @@ final class ClipboardMonitor: ObservableObject {
             timestamp: Date(),
             contentTypeRaw: content.type,
             textContent: content.text,
+            imageFileName: content.type == "file" ? content.fileName : nil,
             fileBookmarks: content.fileBookmarks,
             sourceAppBundleID: NSWorkspace.shared.frontmostApplication?.bundleIdentifier
         )
@@ -166,27 +167,50 @@ final class ClipboardMonitor: ObservableObject {
         _ pb: NSPasteboard,
         types: [NSPasteboard.PasteboardType]
     ) -> (type: String, text: String?, image: Data?, fileBookmarks: Data?, fileName: String?)? {
-        // Check image first — some apps put both fileURL and PNG on pasteboard
-        if types.contains(.png), let data = pb.data(forType: .png) {
-            let image = capImageSize(data, maxBytes: maxImageBytes)
+        // 1. Try known image UTIs first — preserves original format (GIF animation, etc.)
+        let imageUTIs: [NSPasteboard.PasteboardType] = [
+            .png,
+            .tiff,
+            NSPasteboard.PasteboardType("public.jpeg"),
+            NSPasteboard.PasteboardType("com.compuserve.gif"),
+            NSPasteboard.PasteboardType("public.heic"),
+            NSPasteboard.PasteboardType("public.heif"),
+            NSPasteboard.PasteboardType("com.microsoft.bmp"),
+        ]
+        for uti in imageUTIs {
+            if types.contains(uti), let data = pb.data(forType: uti) {
+                let image = capImageSize(data, maxBytes: maxImageBytes)
+                let fileName = extractFileName(from: pb, types: types)
+                return ("image", nil, image, nil, fileName)
+            }
+        }
+
+        // 2. Fallback: NSImage generic reader — covers WeChat and other custom types
+        if let nsImages = pb.readObjects(forClasses: [NSImage.self], options: nil) as? [NSImage],
+           let nsImage = nsImages.first {
+            let pngData = nsImageToPNGData(nsImage)
+            let image = capImageSize(pngData, maxBytes: maxImageBytes)
             let fileName = extractFileName(from: pb, types: types)
             return ("image", nil, image, nil, fileName)
         }
-        if types.contains(.tiff), let data = pb.data(forType: .tiff) {
-            let image = capImageSize(data, maxBytes: maxImageBytes)
-            let fileName = extractFileName(from: pb, types: types)
-            return ("image", nil, image, nil, fileName)
-        }
+
+        // 3. fileURL — capture every URL on the pasteboard as its own bookmark.
         if types.contains(.fileURL),
            let urls = pb.readObjects(forClasses: [NSURL.self], options: nil) as? [URL],
-           let firstURL = urls.first {
-            let bookmarks = try? firstURL.bookmarkData(
-                options: [],
-                includingResourceValuesForKeys: nil,
-                relativeTo: nil
-            )
-            return ("file", nil, nil, bookmarks, nil)
+           !urls.isEmpty {
+            let bookmarks: [Data] = urls.compactMap {
+                try? $0.bookmarkData(
+                    options: [],
+                    includingResourceValuesForKeys: nil,
+                    relativeTo: nil
+                )
+            }
+            guard let encoded = Self.encodeFileBookmarks(bookmarks) else { return nil }
+            let firstName = urls.first?.lastPathComponent
+            return ("file", nil, nil, encoded, firstName)
         }
+
+        // 4. plain text
         if let text = pb.string(forType: .string) {
             return ("text", text, nil, nil, nil)
         }
@@ -194,6 +218,17 @@ final class ClipboardMonitor: ObservableObject {
     }
 
     // MARK: - Helpers
+
+    /// Convert NSImage to PNG Data. Used only in the fallback path
+    /// (custom pasteboard types like WeChat) — known UTIs preserve original format.
+    func nsImageToPNGData(_ nsImage: NSImage) -> Data {
+        let tiff = nsImage.tiffRepresentation
+        guard let tiff,
+              let bitmap = NSBitmapImageRep(data: tiff),
+              let png = bitmap.representation(using: .png, properties: [:])
+        else { return tiff ?? Data() }
+        return png
+    }
 
     private func extractFileName(from pb: NSPasteboard, types: [NSPasteboard.PasteboardType]) -> String? {
         // Try to extract filename if fileURL is also present alongside the image
@@ -203,6 +238,13 @@ final class ClipboardMonitor: ObservableObject {
             return firstURL.lastPathComponent
         }
         return nil
+    }
+
+    /// Encode `[Data]` bookmarks as JSON for the `fileBookmarks` field.
+    /// Returns nil for an empty array so callers can early-out cleanly.
+    static func encodeFileBookmarks(_ bookmarks: [Data]) -> Data? {
+        guard !bookmarks.isEmpty else { return nil }
+        return try? JSONEncoder().encode(bookmarks)
     }
 
     static func md5Hash(_ data: Data) -> String {
