@@ -12,8 +12,8 @@ struct SettingsData: Codable, Equatable {
     var dedupEnabled: Bool = true
 
     // MARK: - Shortcuts
-    var showHideShortcut: String = "cmd+shift+V"
-    var quickPasteShortcut: String = "cmd+shift+C"
+    var showHideShortcut: String = "cmd+shift+v"
+    var quickPasteShortcut: String = "cmd+shift+c"
     var togglePinShortcut: String = ""
 
     // MARK: - Advanced

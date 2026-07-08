@@ -15,8 +15,8 @@ struct SettingsDataTests {
         #expect(data.dedupEnabled == true)
 
         // Shortcuts
-        #expect(data.showHideShortcut == "cmd+shift+V")
-        #expect(data.quickPasteShortcut == "cmd+shift+C")
+        #expect(data.showHideShortcut == "cmd+shift+v")
+        #expect(data.quickPasteShortcut == "cmd+shift+c")
         #expect(data.togglePinShortcut == "")
 
         // Advanced
