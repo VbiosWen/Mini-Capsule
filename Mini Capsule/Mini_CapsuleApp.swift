@@ -30,6 +30,19 @@ class CapsuleAppDelegate: NSObject, NSApplicationDelegate {
         // Hide from Dock and make the app a background accessory
         NSApp.setActivationPolicy(.accessory)
 
+        // Load settings from JSON asynchronously, then finish setup
+        Task { @MainActor in
+            let persistence = SettingsPersistence()
+            let loaded = await persistence.load()
+            self.settingsStore.replaceData(with: loaded)
+            // Ensure the file exists on disk (first launch creates it)
+            try? await persistence.save(loaded)
+
+            self.finishSetup()
+        }
+    }
+
+    private func finishSetup() {
         // Frequency cleanup on startup
         FrequencyCleanupService.performCleanup(
             context: Self.sharedModelContainer.mainContext,

@@ -204,6 +204,12 @@ final class SettingsStore: SettingsProtocol {
 
     // MARK: - Actions
 
+    /// Replace all settings with the given data (used at startup after loading from disk).
+    /// Does NOT trigger persist — the data was just loaded from disk.
+    func replaceData(with newData: SettingsData) {
+        self.data = newData
+    }
+
     func resetAll() {
         data = SettingsData()
         persist()
