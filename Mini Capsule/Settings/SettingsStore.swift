@@ -147,6 +147,7 @@ final class SettingsStore: SettingsProtocol {
         set {
             data.collapsedStyle = newValue
             persist()
+            NotificationCenter.default.post(name: .capsuleStyleDidChange, object: nil)
         }
     }
 
@@ -189,6 +190,7 @@ final class SettingsStore: SettingsProtocol {
         set {
             data.ringDiameter = newValue
             persist()
+            NotificationCenter.default.post(name: .capsuleStyleDidChange, object: nil)
         }
     }
 

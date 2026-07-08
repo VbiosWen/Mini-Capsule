@@ -42,4 +42,7 @@ extension Notification.Name {
 
     /// Posted to toggle pin status of an item. UserInfo: ["itemID": UUID]
     static let togglePinItem = Notification.Name("togglePinItem")
+
+    /// Posted when the collapsed style or ring diameter changes in settings.
+    static let capsuleStyleDidChange = Notification.Name("capsuleStyleDidChange")
 }

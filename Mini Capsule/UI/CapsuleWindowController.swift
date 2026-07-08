@@ -42,7 +42,7 @@ final class CapsuleWindowController: NSWindowController, NSWindowDelegate {
         self.modelContainer = modelContainer
         self.settingsStore = settingsStore
 
-        let savedFrame = Self.loadFrame(style: settingsStore.collapsedStyle, frameData: settingsStore.capsuleWindowFrame)
+        let savedFrame = Self.loadFrame(style: settingsStore.collapsedStyle, ringDiameter: settingsStore.ringDiameter, frameData: settingsStore.capsuleWindowFrame)
 
         let panel = CapsulePanel(
             contentRect: savedFrame,
@@ -248,15 +248,15 @@ final class CapsuleWindowController: NSWindowController, NSWindowDelegate {
             }
         )
 
-        // Listen for collapsed style changes via UserDefaults
+        // Listen for collapsed style changes via settingsStore observation
         observers.append(
             NotificationCenter.default.addObserver(
-                forName: UserDefaults.didChangeNotification,
+                forName: .capsuleStyleDidChange,
                 object: nil,
                 queue: .main
             ) { [weak self] _ in
                 guard let self = self, let window = self.window, !self.isExpanded else { return }
-                let style = UserDefaults.standard.string(forKey: SettingsKey.collapsedStyle.rawValue) ?? "capsule"
+                let style = self.settingsStore.collapsedStyle
                 let radius: CGFloat
                 switch style {
                 case "dot": radius = self.settingsStore.ringDiameter / 2
@@ -351,12 +351,11 @@ final class CapsuleWindowController: NSWindowController, NSWindowDelegate {
         }
     }
 
-    private static func loadFrame(style: String, frameData: Data) -> NSRect {
+    private static func loadFrame(style: String, ringDiameter: Double, frameData: Data) -> NSRect {
         let size: NSSize
         switch style {
         case "dot":
-            let diameter = UserDefaults.standard.object(forKey: SettingsKey.ringDiameter.rawValue) as? Double ?? 30
-            size = NSSize(width: diameter, height: diameter)
+            size = NSSize(width: ringDiameter, height: ringDiameter)
         case "icon": size = Self.iconCollapsedSize
         default: size = Self.capsuleCollapsedSize
         }
