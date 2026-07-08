@@ -87,6 +87,7 @@ final class SettingsStore: SettingsProtocol {
         set {
             data.showHideShortcut = newValue
             persist()
+            NotificationCenter.default.post(name: .shortcutsDidChange, object: nil)
         }
     }
 
@@ -95,6 +96,7 @@ final class SettingsStore: SettingsProtocol {
         set {
             data.quickPasteShortcut = newValue
             persist()
+            NotificationCenter.default.post(name: .shortcutsDidChange, object: nil)
         }
     }
 
@@ -103,6 +105,7 @@ final class SettingsStore: SettingsProtocol {
         set {
             data.togglePinShortcut = newValue
             persist()
+            NotificationCenter.default.post(name: .shortcutsDidChange, object: nil)
         }
     }
 

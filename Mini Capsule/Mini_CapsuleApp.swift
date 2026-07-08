@@ -23,7 +23,7 @@ class CapsuleAppDelegate: NSObject, NSApplicationDelegate {
 
     private var capsuleWindowController: CapsuleWindowController?
     private var clipboardMonitor: ClipboardMonitor?
-    private var shortcutMonitor: Any?
+    private let hotKeyCenter = HotKeyCenter()
     private var menuBarService: MenuBarService?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -81,45 +81,28 @@ class CapsuleAppDelegate: NSObject, NSApplicationDelegate {
         }
 
         registerShortcuts()
+
+        NotificationCenter.default.addObserver(
+            forName: .shortcutsDidChange, object: nil, queue: .main
+        ) { [weak self] _ in
+            self?.registerShortcuts()
+        }
     }
 
     private func registerShortcuts() {
-        shortcutMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
-            guard let self = self else { return event }
-
-            let combo = self.shortcutString(from: event)
-
-            let showHide = self.settingsStore.showHideShortcut
-            let quickPaste = self.settingsStore.quickPasteShortcut
-            let togglePin = self.settingsStore.togglePinShortcut
-
-            if combo == showHide {
-                self.capsuleWindowController?.toggleWindow()
-                return nil
-            }
-            if combo == quickPaste {
-                self.performQuickPaste()
-                return nil
-            }
-            if !togglePin.isEmpty && combo == togglePin {
-                self.performTogglePin()
-                return nil
-            }
-
-            return event
+        hotKeyCenter.installHandlerIfNeeded()
+        hotKeyCenter.unregisterAll()
+        hotKeyCenter.register(settingsStore.showHideShortcut) { [weak self] in
+            self?.capsuleWindowController?.toggleWindow()
         }
-    }
-
-    private func shortcutString(from event: NSEvent) -> String {
-        var parts: [String] = []
-        if event.modifierFlags.contains(.command) { parts.append("cmd") }
-        if event.modifierFlags.contains(.shift) { parts.append("shift") }
-        if event.modifierFlags.contains(.option) { parts.append("option") }
-        if event.modifierFlags.contains(.control) { parts.append("control") }
-        if let key = event.charactersIgnoringModifiers?.lowercased() {
-            parts.append(key)
+        hotKeyCenter.register(settingsStore.quickPasteShortcut) { [weak self] in
+            self?.performQuickPaste()
         }
-        return parts.joined(separator: "+")
+        if !settingsStore.togglePinShortcut.isEmpty {
+            hotKeyCenter.register(settingsStore.togglePinShortcut) { [weak self] in
+                self?.performTogglePin()
+            }
+        }
     }
 
     private func performQuickPaste() {
@@ -144,12 +127,6 @@ class CapsuleAppDelegate: NSObject, NSApplicationDelegate {
     func applicationWillTerminate(_ notification: Notification) {
         clipboardMonitor?.stop()
         menuBarService?.stop()
-    }
-
-    deinit {
-        if let monitor = shortcutMonitor {
-            NSEvent.removeMonitor(monitor)
-        }
     }
 }
 #endif

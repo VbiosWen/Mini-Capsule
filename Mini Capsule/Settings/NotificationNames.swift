@@ -45,4 +45,7 @@ extension Notification.Name {
 
     /// Posted when the collapsed style or ring diameter changes in settings.
     static let capsuleStyleDidChange = Notification.Name("capsuleStyleDidChange")
+
+    /// Posted when any of the three shortcut strings change (show/hide, quick-paste, toggle-pin).
+    static let shortcutsDidChange = Notification.Name("SettingsShortcutsDidChange")
 }
