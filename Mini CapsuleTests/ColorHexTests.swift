@@ -32,4 +32,23 @@ struct ColorHexTests {
         #expect(hex?.hasPrefix("#") == true)
         #expect(hex?.count == 7)
     }
+
+    @Test func deterministicColorIsStableForSameSeed() async throws {
+        let a = Color.deterministic(from: "abc-123")
+        let b = Color.deterministic(from: "abc-123")
+        #expect(a.toHex() == b.toHex())
+    }
+
+    @Test func deterministicColorDiffersForDifferentSeeds() async throws {
+        let a = Color.deterministic(from: "seed-A")
+        let b = Color.deterministic(from: "seed-B")
+        #expect(a.toHex() != b.toHex())
+    }
+
+    @Test func deterministicColorEmptySeedProducesValidColor() async throws {
+        let color = Color.deterministic(from: "")
+        let hex = color.toHex()
+        #expect(hex.hasPrefix("#"))
+        #expect(hex.count == 7)
+    }
 }

@@ -14,6 +14,20 @@ extension Color {
         )
     }
 
+    /// Deterministic color from a seed string. Same seed → same color.
+    /// HSB tuned so both light and dark backgrounds show the color clearly.
+    static func deterministic(from seed: String) -> Color {
+        var hash: UInt64 = 0xcbf29ce484222325   // FNV-1a offset basis
+        for byte in seed.utf8 {
+            hash ^= UInt64(byte)
+            hash &*= 0x100000001b3           // FNV-1a prime
+        }
+        let hue = Double(hash & 0xFFFF) / 65535.0
+        let sat = 0.55 + Double((hash >> 16) & 0xFFFF) / 65535.0 * 0.20
+        let bri = 0.55 + Double((hash >> 32) & 0xFFFF) / 65535.0 * 0.15
+        return Color(hue: hue, saturation: sat, brightness: bri)
+    }
+
     func toHex() -> String {
         guard let components = NSColor(self).cgColor.components, components.count >= 3 else {
             return "#007AFF"
