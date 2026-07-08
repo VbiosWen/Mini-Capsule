@@ -8,22 +8,7 @@ import SwiftData
 @MainActor
 struct SettingsStoreTests {
 
-    private static let allKeys = [
-        "historyMaxCount", "imageMaxSizeMB", "pollingInterval", "cleanupOnStartup", "dedupEnabled",
-        "showHideShortcut", "quickPasteShortcut", "togglePinShortcut", "iCloudSyncEnabled",
-        "launchAtLogin", "showInMenuBar", "showFloatingPanel", "collapsedStyle",
-        "hoverExpandDelay", "hoverCollapseDelay",
-        "panelOpacityUnfocused", "backgroundImageData", "ringDiameter",
-        "capsuleWindowFrame"
-    ]
-
     @Test func defaults() async throws {
-        // Reset all UserDefaults keys for clean state
-        let defaults = UserDefaults.standard
-        for key in Self.allKeys {
-            defaults.removeObject(forKey: key)
-        }
-
         // Given: a fresh store
         let store = SettingsStore()
 
@@ -92,20 +77,6 @@ struct SettingsStoreTests {
         #expect(store.ringDiameter == 30)
     }
 
-    @Test func settingsPersistAcrossStoreInstances() async throws {
-        let store1 = SettingsStore()
-        store1.historyMaxCount = 300
-
-        // Given: a second store instance
-        let store2 = SettingsStore()
-
-        // Then: reads the same UserDefaults value
-        #expect(store2.historyMaxCount == 300)
-
-        // Cleanup
-        store1.resetAll()
-    }
-
     @Test func shortcutKeys() async throws {
         let store = SettingsStore()
 
@@ -165,10 +136,6 @@ struct SettingsStoreTests {
     }
 
     @Test func defaultValuesAreConsistent() async throws {
-        let defaults = UserDefaults.standard
-        for key in SettingsKey.allCases {
-            defaults.removeObject(forKey: key.rawValue)
-        }
         let store = SettingsStore()
 
         #expect(store.historyMaxCount == 200)
@@ -218,31 +185,34 @@ struct CapsuleWindowControllerTests {
     }
 
     @Test func initialCornerRadiusCapsule() async throws {
-        let defaults = UserDefaults.standard
-        defaults.set("capsule", forKey: "collapsedStyle")
+        var data = SettingsData()
+        data.collapsedStyle = "capsule"
+        let store = SettingsStore(data: data)
 
         let container = try Self.makeContainer()
-        let controller = CapsuleWindowController(modelContainer: container, settingsStore: SettingsStore())
+        let controller = CapsuleWindowController(modelContainer: container, settingsStore: store)
 
         #expect(controller.window?.contentView?.layer?.cornerRadius == 18)
     }
 
     @Test func initialCornerRadiusDot() async throws {
-        let defaults = UserDefaults.standard
-        defaults.set("dot", forKey: "collapsedStyle")
+        var data = SettingsData()
+        data.collapsedStyle = "dot"
+        let store = SettingsStore(data: data)
 
         let container = try Self.makeContainer()
-        let controller = CapsuleWindowController(modelContainer: container, settingsStore: SettingsStore())
+        let controller = CapsuleWindowController(modelContainer: container, settingsStore: store)
 
         #expect(controller.window?.contentView?.layer?.cornerRadius == 15)
     }
 
     @Test func updatesCornerRadiusOnExpandAndCollapse() async throws {
-        let defaults = UserDefaults.standard
-        defaults.set("capsule", forKey: "collapsedStyle")
+        var data = SettingsData()
+        data.collapsedStyle = "capsule"
+        let store = SettingsStore(data: data)
 
         let container = try Self.makeContainer()
-        let controller = CapsuleWindowController(modelContainer: container, settingsStore: SettingsStore())
+        let controller = CapsuleWindowController(modelContainer: container, settingsStore: store)
 
         // Initial: capsule style → cornerRadius 18
         #expect(controller.window?.contentView?.layer?.cornerRadius == 18)
@@ -320,32 +290,27 @@ struct CapsuleWindowControllerTests {
 
     @Test func resetPositionRemovesSavedFrameKey() async throws {
         let container = try Self.makeContainer()
-        _ = CapsuleWindowController(modelContainer: container, settingsStore: SettingsStore())
-
-        // Save a known frame position
-        UserDefaults.standard.set([
-            "x": CGFloat(100), "y": CGFloat(200),
-            "w": CGFloat(200), "h": CGFloat(36)
-        ], forKey: SettingsKey.capsuleWindowFrame.rawValue)
+        let store = SettingsStore()
+        let frameDict: [String: CGFloat] = ["x": 100, "y": 200, "w": 200, "h": 36]
+        store.capsuleWindowFrame = try JSONEncoder().encode(frameDict)
+        _ = CapsuleWindowController(modelContainer: container, settingsStore: store)
 
         NotificationCenter.default.post(name: .resetCapsulePosition, object: nil)
 
-        #expect(UserDefaults.standard.dictionary(forKey: SettingsKey.capsuleWindowFrame.rawValue) == nil)
+        #expect(store.capsuleWindowFrame == Data())
     }
 
     @Test func resetPositionUpdatesWindowFrame() async throws {
         let container = try Self.makeContainer()
-        let controller = CapsuleWindowController(modelContainer: container, settingsStore: SettingsStore())
+        let store = SettingsStore()
+        let frameDict: [String: CGFloat] = ["x": 100, "y": 200, "w": 200, "h": 36]
+        store.capsuleWindowFrame = try JSONEncoder().encode(frameDict)
+        let controller = CapsuleWindowController(modelContainer: container, settingsStore: store)
         guard let window = controller.window else {
             Issue.record("No window")
             return
         }
 
-        // Save a frame and move window away from default
-        UserDefaults.standard.set([
-            "x": CGFloat(100), "y": CGFloat(200),
-            "w": CGFloat(200), "h": CGFloat(36)
-        ], forKey: SettingsKey.capsuleWindowFrame.rawValue)
         let oldFrame = NSRect(x: 100, y: 200, width: 200, height: 36)
         window.setFrame(oldFrame, display: false)
 
@@ -534,14 +499,11 @@ struct CapsuleViewSettingsTests {
 
 @MainActor
 struct GeneralSettingsViewTests {
-    @Test func resetPositionActionClearsFrameKeyAndPostsNotification() async throws {
-        // Given: a saved frame position
-        UserDefaults.standard.set([
-            "x": CGFloat(100), "y": CGFloat(200),
-            "w": CGFloat(200), "h": CGFloat(36)
-        ], forKey: SettingsKey.capsuleWindowFrame.rawValue)
+    @Test func resetPositionActionClearsFrameAndPostsNotification() async throws {
+        let store = SettingsStore()
+        let frameDict: [String: CGFloat] = ["x": 100, "y": 200, "w": 200, "h": 36]
+        store.capsuleWindowFrame = try JSONEncoder().encode(frameDict)
 
-        // When: the static reset method is called
         try await confirmation(expectedCount: 1) { posted in
             let obs = NotificationCenter.default.addObserver(
                 forName: .resetCapsulePosition,
@@ -550,11 +512,10 @@ struct GeneralSettingsViewTests {
             ) { _ in posted() }
             defer { NotificationCenter.default.removeObserver(obs) }
 
-            GeneralSettingsView.resetCapsulePosition()
+            GeneralSettingsView.resetCapsulePosition(settings: store)
         }
 
-        // Then: the saved frame key is removed
-        #expect(UserDefaults.standard.dictionary(forKey: SettingsKey.capsuleWindowFrame.rawValue) == nil)
+        #expect(store.capsuleWindowFrame == Data())
     }
 }
 
