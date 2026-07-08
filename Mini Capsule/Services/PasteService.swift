@@ -7,7 +7,22 @@ import Carbon
 
 @MainActor
 final class PasteService {
-    static var isSelfPaste = false
+    /// The pasteboard changeCount produced by our own copy/paste, so the
+    /// monitor can skip exactly that change even though it polls asynchronously.
+    private static var suppressedChangeCount: Int?
+
+    static func markSelfPaste() {
+        suppressedChangeCount = NSPasteboard.general.changeCount
+    }
+
+    /// Returns true (and consumes the token) when `changeCount` is the change we produced.
+    static func shouldSuppress(changeCount: Int) -> Bool {
+        if suppressedChangeCount == changeCount {
+            suppressedChangeCount = nil
+            return true
+        }
+        return false
+    }
 
     /// Dynamically resolve the key code for the "V" character.
     /// Uses TIS + UCKeyTranslate for keyboard-layout-aware lookup,
@@ -49,9 +64,6 @@ final class PasteService {
 
     /// Copy item to clipboard only (no auto-paste). Updates usage stats.
     static func copyToClipboard(_ item: ClipItem) {
-        isSelfPaste = true
-        defer { isSelfPaste = false }
-
         let pasteboard = NSPasteboard.general
         pasteboard.clearContents()
 
@@ -76,6 +88,8 @@ final class PasteService {
         default:
             break
         }
+
+        markSelfPaste()
     }
 
     static func paste(_ item: ClipItem, context: ModelContext) {
@@ -111,9 +125,7 @@ final class PasteService {
             break
         }
 
-        // Mark to prevent self-capture
-        isSelfPaste = true
-        defer { isSelfPaste = false }
+        markSelfPaste()
 
         // Simulate Cmd+V via CGEvent
         let source = CGEventSource(stateID: .combinedSessionState)

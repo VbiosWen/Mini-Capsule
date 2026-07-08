@@ -76,8 +76,8 @@ final class ClipboardMonitor: ObservableObject {
         guard currentChangeCount != lastChangeCount else { return }
         lastChangeCount = currentChangeCount
 
-        // Skip self-triggered pasteboard changes
-        guard !PasteService.isSelfPaste else { return }
+        // Skip changes we produced ourselves (copy/paste), even across the poll gap.
+        if PasteService.shouldSuppress(changeCount: currentChangeCount) { return }
 
         guard let pbTypes = pasteboard.types,
               let content = readPasteboard(pasteboard, types: pbTypes) else { return }

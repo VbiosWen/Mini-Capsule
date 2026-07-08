@@ -12,7 +12,13 @@ struct PasteServiceTests {
         #expect(keyCode != 0)
     }
 
-    @Test func isSelfPasteDefaultsToFalse() async throws {
-        #expect(PasteService.isSelfPaste == false)
+    @MainActor
+    @Test func copyToClipboardArmsSuppressionForItsOwnChange() {
+        let item = ClipItem(contentTypeRaw: "text", textContent: "self-paste-\(UUID())")
+        PasteService.copyToClipboard(item)
+        let count = NSPasteboard.general.changeCount
+        // The change we just made is suppressed exactly once, then released.
+        #expect(PasteService.shouldSuppress(changeCount: count) == true)
+        #expect(PasteService.shouldSuppress(changeCount: count) == false)
     }
 }
