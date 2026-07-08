@@ -84,7 +84,6 @@ struct ClipItemRow: View {
             }
         }
         .onTapGesture {
-            guard isInteractive else { return }
             onTap()
         }
         .contextMenu { contextMenuContent }  // E5
