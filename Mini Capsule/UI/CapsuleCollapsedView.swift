@@ -106,7 +106,7 @@ struct CapsuleCollapsedView: View {
         case "image":
             return "🖼️ 图片"
         case "file":
-            return "📁 文件"
+            return "📁 \(item.imageFileName ?? "文件")"
         default:
             return ""
         }
