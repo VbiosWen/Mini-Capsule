@@ -93,7 +93,7 @@ struct GeneralSettingsView: View {
 
             Section {
                 Button(action: {
-                    Self.resetCapsulePosition()
+                    Self.resetCapsulePosition(settings: settings)
                 }) {
                     Label("重置浮动窗位置", systemImage: "arrow.counterclockwise")
                 }
@@ -105,8 +105,8 @@ struct GeneralSettingsView: View {
         .frame(width: 450, height: 370)
     }
 
-    static func resetCapsulePosition() {
-        UserDefaults.standard.removeObject(forKey: SettingsKey.capsuleWindowFrame.rawValue)
+    static func resetCapsulePosition(settings: SettingsStore) {
+        settings.capsuleWindowFrame = Data()
         NotificationCenter.default.post(name: .resetCapsulePosition, object: nil)
     }
 
