@@ -239,10 +239,20 @@ struct ClipItemRow: View {
                 .resizable()
                 .aspectRatio(contentMode: .fill)
                 .frame(width: 36, height: 36)
+        } else if item.contentTypeRaw == "text", let ch = firstDisplayCharacter(item.textContent) {
+            Text(String(ch))
+                .font(.system(size: 18, weight: .semibold, design: .rounded))
+                .foregroundColor(Color.deterministic(from: item.id.uuidString))
+                .frame(width: 36, height: 36)
         } else {
             iconForType
                 .font(.system(size: 15))
         }
+    }
+
+    private func firstDisplayCharacter(_ text: String?) -> Character? {
+        guard let text else { return nil }
+        return text.first { !$0.isWhitespace && !$0.isNewline }
     }
 
     private var iconForType: some View {
