@@ -1,5 +1,6 @@
 // Mini Capsule/UI/ClipItemRow.swift
 import SwiftUI
+import AppKit
 
 struct ClipItemRow: View {
     let item: ClipItem
@@ -14,6 +15,8 @@ struct ClipItemRow: View {
     @State private var showEditor = false
     @State private var isPopoverHovered = false
     @State private var hoverTask: Task<Void, Never>?
+    @State private var resolvedFileURL: URL?
+    @State private var resolvedFileCount: Int = 0
 
     var body: some View {
         HStack(spacing: 10) {
@@ -60,6 +63,20 @@ struct ClipItemRow: View {
         .padding(.vertical, 6)
         .background(selectionBackground)
         .contentShape(Rectangle())
+        .task(id: item.id) {
+            guard item.contentTypeRaw == "file",
+                  let blob = item.fileBookmarks else {
+                resolvedFileURL = nil
+                resolvedFileCount = 0
+                return
+            }
+            let bookmarks = PasteService.decodeFileBookmarks(blob)
+            resolvedFileCount = bookmarks.count
+            var isStale = false
+            resolvedFileURL = bookmarks.first.flatMap {
+                try? URL(resolvingBookmarkData: $0, options: [], bookmarkDataIsStale: &isStale)
+            }
+        }
         .onHover { hovering in
             if hovering {
                 hoverTask?.cancel()
@@ -243,6 +260,11 @@ struct ClipItemRow: View {
                 .font(.system(size: 18, weight: .semibold, design: .rounded))
                 .foregroundColor(Color.deterministic(from: item.id.uuidString))
                 .frame(width: 36, height: 36)
+        } else if item.contentTypeRaw == "file", let url = resolvedFileURL {
+            Image(nsImage: NSWorkspace.shared.icon(forFile: url.path))
+                .resizable()
+                .aspectRatio(contentMode: .fit)
+                .frame(width: 30, height: 30)
         } else {
             iconForType
                 .font(.system(size: 15))
@@ -269,7 +291,8 @@ struct ClipItemRow: View {
         case "image":
             return item.imageFileName ?? "图片"
         case "file":
-            return "文件"
+            let name = item.imageFileName ?? "文件"
+            return resolvedFileCount > 1 ? "\(name) 等 \(resolvedFileCount) 项" : name
         default:
             return "未知"
         }
