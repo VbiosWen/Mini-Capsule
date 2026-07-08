@@ -43,12 +43,14 @@ class CapsuleAppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func finishSetup() {
-        // Frequency cleanup on startup
-        FrequencyCleanupService.performCleanup(
-            context: Self.sharedModelContainer.mainContext,
-            keepCount: nil,
-            settings: settingsStore
-        )
+        // Frequency cleanup on startup (only if enabled)
+        if settingsStore.cleanupOnStartup {
+            FrequencyCleanupService.performCleanup(
+                context: Self.sharedModelContainer.mainContext,
+                keepCount: nil,
+                settings: settingsStore
+            )
+        }
 
         // Create capsule window
         let controller = CapsuleWindowController(modelContainer: Self.sharedModelContainer, settingsStore: settingsStore)
