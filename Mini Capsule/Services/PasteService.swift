@@ -62,6 +62,16 @@ final class PasteService {
         }
     }
 
+    /// Decode a `fileBookmarks` blob. New format is a JSON-encoded `[Data]`
+    /// (one element per URL). Legacy blobs were a single raw bookmark
+    /// `Data`; those are returned as `[data]` so old items still paste.
+    static func decodeFileBookmarks(_ data: Data) -> [Data] {
+        if let arr = try? JSONDecoder().decode([Data].self, from: data), !arr.isEmpty {
+            return arr
+        }
+        return [data]
+    }
+
     /// Copy item to clipboard only (no auto-paste). Updates usage stats.
     static func copyToClipboard(_ item: ClipItem) {
         let pasteboard = NSPasteboard.general
@@ -76,13 +86,13 @@ final class PasteService {
             }
         case "file":
             if let bookmarkData = item.fileBookmarks {
+                let bookmarks = Self.decodeFileBookmarks(bookmarkData)
                 var isStale = false
-                if let url = try? URL(
-                    resolvingBookmarkData: bookmarkData,
-                    options: [],
-                    bookmarkDataIsStale: &isStale
-                ) {
-                    pasteboard.writeObjects([url as NSURL])
+                let urls: [URL] = bookmarks.compactMap {
+                    try? URL(resolvingBookmarkData: $0, options: [], bookmarkDataIsStale: &isStale)
+                }
+                if !urls.isEmpty {
+                    pasteboard.writeObjects(urls as [NSURL])
                 }
             }
         default:
@@ -112,16 +122,16 @@ final class PasteService {
             }
         case "file":
             if let bookmarkData = item.fileBookmarks {
+                let bookmarks = Self.decodeFileBookmarks(bookmarkData)
                 var isStale = false
-                if let url = try? URL(
-                    resolvingBookmarkData: bookmarkData,
-                    options: [],
-                    bookmarkDataIsStale: &isStale
-                ) {
-                    pasteboard.writeObjects([url as NSURL])
+                let urls: [URL] = bookmarks.compactMap {
+                    try? URL(resolvingBookmarkData: $0, options: [], bookmarkDataIsStale: &isStale)
+                }
+                if !urls.isEmpty {
+                    pasteboard.writeObjects(urls as [NSURL])
                 }
             }
-        default: 
+        default:
             break
         }
 
