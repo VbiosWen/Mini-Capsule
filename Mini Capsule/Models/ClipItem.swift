@@ -10,7 +10,8 @@ final class ClipItem {
     var pasteCount: Int
     var contentTypeRaw: String
     var textContent: String?
-    var imageData: Data?
+    @Attribute(.externalStorage) var imageData: Data?
+    @Attribute(.externalStorage) var imageThumbnail: Data?
     var imageFileName: String?
     var imageMD5: String?
     var fileBookmarks: Data?
@@ -26,6 +27,7 @@ final class ClipItem {
         contentTypeRaw: String,
         textContent: String? = nil,
         imageData: Data? = nil,
+        imageThumbnail: Data? = nil,
         imageFileName: String? = nil,
         imageMD5: String? = nil,
         fileBookmarks: Data? = nil,
@@ -40,6 +42,7 @@ final class ClipItem {
         self.contentTypeRaw = contentTypeRaw
         self.textContent = textContent
         self.imageData = imageData
+        self.imageThumbnail = imageThumbnail
         self.imageFileName = imageFileName
         self.imageMD5 = imageMD5
         self.fileBookmarks = fileBookmarks

@@ -48,4 +48,8 @@ extension Notification.Name {
 
     /// Posted when any of the three shortcut strings change (show/hide, quick-paste, toggle-pin).
     static let shortcutsDidChange = Notification.Name("SettingsShortcutsDidChange")
+
+    /// Posted after ClipboardMonitor inserts or mutates ClipItem records.
+    /// Consumers (ClipboardListViewModel) use this to invalidate cached fetch results.
+    static let clipItemsDidChange = Notification.Name("clipItemsDidChange")
 }
