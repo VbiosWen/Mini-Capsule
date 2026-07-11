@@ -1,6 +1,7 @@
 // Mini Capsule/UI/ClipItemRow.swift
 import SwiftUI
 import AppKit
+import SwiftData
 
 struct ClipItemRow: View {
     let item: ClipItem
@@ -17,6 +18,7 @@ struct ClipItemRow: View {
     @State private var hoverTask: Task<Void, Never>?
     @State private var resolvedFileURL: URL?
     @State private var resolvedFileCount: Int = 0
+    @Environment(\.modelContext) private var modelContext
 
     var body: some View {
         HStack(spacing: 10) {
@@ -64,17 +66,32 @@ struct ClipItemRow: View {
         .background(selectionBackground)
         .contentShape(Rectangle())
         .task(id: item.id) {
-            guard item.contentTypeRaw == "file",
-                  let blob = item.fileBookmarks else {
+            // Resolve file bookmark URL for file items (existing behavior)
+            if item.contentTypeRaw == "file", let blob = item.fileBookmarks {
+                let bookmarks = PasteService.decodeFileBookmarks(blob)
+                resolvedFileCount = bookmarks.count
+                var isStale = false
+                resolvedFileURL = bookmarks.first.flatMap {
+                    try? URL(resolvingBookmarkData: $0, options: [], bookmarkDataIsStale: &isStale)
+                }
+            } else {
                 resolvedFileURL = nil
                 resolvedFileCount = 0
-                return
             }
-            let bookmarks = PasteService.decodeFileBookmarks(blob)
-            resolvedFileCount = bookmarks.count
-            var isStale = false
-            resolvedFileURL = bookmarks.first.flatMap {
-                try? URL(resolvingBookmarkData: $0, options: [], bookmarkDataIsStale: &isStale)
+
+            // Backfill thumbnail for legacy image items on first appearance.
+            // Runs at most once per (id, appearance); LazyVStack limits how many
+            // rows execute concurrently.
+            if item.contentTypeRaw == "image",
+               item.imageThumbnail == nil,
+               let full = item.imageData {
+                let thumb = await Task.detached(priority: .utility) {
+                    ClipboardMonitor.generateThumbnail(full)
+                }.value
+                if let thumb {
+                    item.imageThumbnail = thumb
+                    try? modelContext.save()
+                }
             }
         }
         .onHover { hovering in
@@ -250,7 +267,18 @@ struct ClipItemRow: View {
 
     @ViewBuilder
     private var typeIcon: some View {
-        if item.contentTypeRaw == "image", let imageData = item.imageData, let nsImage = NSImage(data: imageData) {
+        if item.contentTypeRaw == "image",
+           let thumbData = item.imageThumbnail,
+           let nsImage = NSImage(data: thumbData) {
+            Image(nsImage: nsImage)
+                .resizable()
+                .aspectRatio(contentMode: .fill)
+                .frame(width: 36, height: 36)
+        } else if item.contentTypeRaw == "image",
+                  let full = item.imageData,
+                  let nsImage = NSImage(data: full) {
+            // Legacy: no thumbnail yet. Backfill runs from .task; meanwhile
+            // render the full image (LazyVStack limits how many rows do this).
             Image(nsImage: nsImage)
                 .resizable()
                 .aspectRatio(contentMode: .fill)
