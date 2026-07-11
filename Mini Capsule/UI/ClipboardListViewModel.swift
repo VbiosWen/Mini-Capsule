@@ -22,34 +22,86 @@ enum ContentFilter: String, CaseIterable {
 @MainActor
 @Observable
 final class ClipboardListViewModel {
-    // MARK: - Filter State
+    // MARK: - Filter State (observed)
 
     var searchText = ""
     var filterType: ContentFilter = .all
 
-    // MARK: - Selection State
+    // MARK: - Selection State (observed)
 
     var selectedItemIDs = Set<UUID>()
     var isMultiSelectMode = false
     var lastCopiedItemID: UUID?
+
+    // MARK: - Cache Version (observed)
+    /// Tracked so SwiftUI re-renders when we invalidate. Consumers read
+    /// `filteredItems` which reads this transitively.
+    private var cacheVersion: Int = 0
 
     // MARK: - Dependencies
 
     let modelContext: ModelContext
     let settings: SettingsStore
 
-    // MARK: - Init
+    // MARK: - Cache Storage (not observed)
+
+    @ObservationIgnored private var itemsCache: [ClipItem] = []
+    @ObservationIgnored private var cacheKey: CacheKey?
+    @ObservationIgnored private var changeObserver: NSObjectProtocol?
+
+    private struct CacheKey: Equatable {
+        let search: String
+        let filter: ContentFilter
+        let version: Int
+    }
+
+    // MARK: - Init / Deinit
 
     init(modelContext: ModelContext, settings: SettingsStore) {
         self.modelContext = modelContext
         self.settings = settings
+        self.changeObserver = NotificationCenter.default.addObserver(
+            forName: .clipItemsDidChange,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            self?.invalidateCache()
+        }
     }
+
+    deinit {
+        if let observer = changeObserver {
+            NotificationCenter.default.removeObserver(observer)
+        }
+    }
+
+    // MARK: - Cache Control
+
+    func invalidateCache() {
+        cacheVersion &+= 1
+        cacheKey = nil
+        itemsCache = []
+    }
+
+    /// Clear the strong ref array without bumping version. Called on capsule
+    /// collapse so SwiftData can release the managed objects.
+    func purgeCache() {
+        cacheKey = nil
+        itemsCache = []
+    }
+
+    /// Testing SPI — how many ClipItems the cache currently retains.
+    var _cachedItemCountForTesting: Int { itemsCache.count }
 
     // MARK: - Computed
 
     /// Fetch all items, sorted by pinned-first then timestamp descending.
     /// Pinned items sorted by sortOrder (ascending), unpinned by timestamp.
+    /// Memoized on (searchText, filterType, cacheVersion).
     var filteredItems: [ClipItem] {
+        let key = CacheKey(search: searchText, filter: filterType, version: cacheVersion)
+        if key == cacheKey { return itemsCache }
+
         let descriptor = FetchDescriptor<ClipItem>(
             sortBy: [SortDescriptor(\ClipItem.timestamp, order: .reverse)]
         )
@@ -76,14 +128,16 @@ final class ClipboardListViewModel {
             }
         }
 
-        // Pinned items first, sorted by sortOrder; unpinned by timestamp
-        return searched.sorted { a, b in
+        let result = searched.sorted { a, b in
             if a.isPinned != b.isPinned { return a.isPinned }
             if a.isPinned {
                 return (a.sortOrder ?? Int.max) < (b.sortOrder ?? Int.max)
             }
             return a.timestamp > b.timestamp
         }
+        cacheKey = key
+        itemsCache = result
+        return result
     }
 
     var pinnedCount: Int {
@@ -105,10 +159,12 @@ final class ClipboardListViewModel {
         item.timestamp = Date()
         try? modelContext.save()
         lastCopiedItemID = item.id
+        invalidateCache()
     }
 
     func pasteItem(_ item: ClipItem) {
         PasteService.paste(item, context: modelContext)
+        invalidateCache()
     }
 
     func deleteItem(_ item: ClipItem) {
@@ -117,6 +173,7 @@ final class ClipboardListViewModel {
         }
         modelContext.delete(item)
         try? modelContext.save()
+        invalidateCache()
     }
 
     func deleteSelected() {
@@ -129,23 +186,25 @@ final class ClipboardListViewModel {
         try? modelContext.save()
         selectedItemIDs.removeAll()
         isMultiSelectMode = false
+        invalidateCache()
     }
 
     func togglePin(_ item: ClipItem) {
         item.isPinned.toggle()
         if item.isPinned {
-            // Assign next sort order
             let pinned = (try? modelContext.fetch(FetchDescriptor<ClipItem>(sortBy: [])))?.filter(\.isPinned) ?? []
             item.sortOrder = (pinned.map { $0.sortOrder ?? 0 }.max() ?? -1) + 1
         } else {
             item.sortOrder = nil
         }
         try? modelContext.save()
+        invalidateCache()
     }
 
     func editText(_ item: ClipItem, content: String) {
         item.textContent = content
         try? modelContext.save()
+        invalidateCache()
     }
 
     func toggleMultiSelect() {
@@ -193,8 +252,6 @@ final class ClipboardListViewModel {
         } else if isMultiSelectMode {
             toggleMultiSelect()
         }
-        // collapse is handled by CapsuleViewModel — KeyboardEventHandler
-        // calls this then CapsuleViewModel.collapse()
     }
 
     func selectAll() {

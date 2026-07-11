@@ -304,4 +304,45 @@ struct ClipboardListViewModelTests {
 
         settings.resetAll()
     }
+
+    @Test func filteredItemsCachePopulatesAfterFirstRead() throws {
+        let schema = Schema([Item.self, ClipItem.self])
+        let config = ModelConfiguration(schema: schema, isStoredInMemoryOnly: true)
+        let container = try ModelContainer(for: schema, configurations: [config])
+        let context = container.mainContext
+        context.insert(ClipItem(contentTypeRaw: "text", textContent: "x"))
+        try context.save()
+
+        let settings = SettingsStore()
+        let vm = ClipboardListViewModel(modelContext: context, settings: settings)
+        #expect(vm._cachedItemCountForTesting == 0)  // cold
+        _ = vm.filteredItems
+        #expect(vm._cachedItemCountForTesting == 1)  // warm
+        vm.invalidateCache()
+        #expect(vm._cachedItemCountForTesting == 0)  // invalidated
+
+        settings.resetAll()
+    }
+
+    @Test func invalidateOnClipItemsDidChangeNotification() throws {
+        let schema = Schema([Item.self, ClipItem.self])
+        let config = ModelConfiguration(schema: schema, isStoredInMemoryOnly: true)
+        let container = try ModelContainer(for: schema, configurations: [config])
+        let context = container.mainContext
+        context.insert(ClipItem(contentTypeRaw: "text", textContent: "before"))
+        try context.save()
+
+        let settings = SettingsStore()
+        let vm = ClipboardListViewModel(modelContext: context, settings: settings)
+        _ = vm.filteredItems  // populate cache
+
+        context.insert(ClipItem(contentTypeRaw: "text", textContent: "after"))
+        try context.save()
+        NotificationCenter.default.post(name: .clipItemsDidChange, object: nil)
+
+        // After notification, next access must reflect the new item.
+        #expect(vm.filteredItems.count == 2)
+
+        settings.resetAll()
+    }
 }
