@@ -138,4 +138,35 @@ struct ClipboardMonitorTests {
         let encoded = ClipboardMonitor.encodeFileBookmarks([])
         #expect(encoded == nil)
     }
+
+    // MARK: - generateThumbnail tests
+
+    @Test func generateThumbnailProducesPNGUnderMaxDimension() {
+        // Build a 200×300 red image and encode as PNG.
+        let original = NSImage(size: NSSize(width: 200, height: 300))
+        original.lockFocus()
+        NSColor.red.setFill()
+        NSRect(origin: .zero, size: NSSize(width: 200, height: 300)).fill()
+        original.unlockFocus()
+        let monitor = ClipboardMonitor(settings: MockSettings())
+        let pngData = monitor.nsImageToPNGData(original)
+
+        let thumb = ClipboardMonitor.generateThumbnail(pngData, maxDimension: 72)
+
+        #expect(thumb != nil, "thumbnail should be generated for valid image")
+        guard let thumb, let decoded = NSImage(data: thumb) else {
+            Issue.record("thumb undecodable")
+            return
+        }
+        #expect(max(decoded.size.width, decoded.size.height) <= 72,
+                "longest side must be ≤ maxDimension")
+        // Verify PNG signature
+        let pngSignature: [UInt8] = [137, 80, 78, 71, 13, 10, 26, 10]
+        #expect(Array(thumb.prefix(8)) == pngSignature)
+    }
+
+    @Test func generateThumbnailReturnsNilForGarbageData() {
+        let garbage = Data([0x00, 0x01, 0x02, 0x03])
+        #expect(ClipboardMonitor.generateThumbnail(garbage) == nil)
+    }
 }

@@ -230,6 +230,34 @@ final class ClipboardMonitor: ObservableObject {
         return png
     }
 
+    /// Decode `data`, redraw at `maxDimension` (longest side), and return PNG bytes.
+    /// Used at capture time for the row-preview thumbnail column, and lazily by
+    /// legacy items on first render. Wrapped in `autoreleasepool` so the transient
+    /// NSImage / NSBitmapImageRep drop as soon as this returns.
+    static func generateThumbnail(_ data: Data, maxDimension: CGFloat = 72) -> Data? {
+        autoreleasepool {
+            guard let source = NSImage(data: data) else { return nil }
+            let src = source.size
+            guard src.width > 0, src.height > 0 else { return nil }
+            let longest = max(src.width, src.height)
+            let scale = min(1.0, maxDimension / longest)
+            let target = NSSize(width: src.width * scale, height: src.height * scale)
+
+            let out = NSImage(size: target)
+            out.lockFocus()
+            source.draw(in: NSRect(origin: .zero, size: target),
+                        from: NSRect(origin: .zero, size: src),
+                        operation: .copy, fraction: 1.0)
+            out.unlockFocus()
+
+            guard let tiff = out.tiffRepresentation,
+                  let bitmap = NSBitmapImageRep(data: tiff),
+                  let png = bitmap.representation(using: .png, properties: [:])
+            else { return nil }
+            return png
+        }
+    }
+
     private func extractFileName(from pb: NSPasteboard, types: [NSPasteboard.PasteboardType]) -> String? {
         // Try to extract filename if fileURL is also present alongside the image
         if types.contains(.fileURL),
