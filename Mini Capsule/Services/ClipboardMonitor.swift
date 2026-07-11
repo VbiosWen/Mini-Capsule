@@ -245,7 +245,7 @@ final class ClipboardMonitor: ObservableObject {
     /// Used at capture time for the row-preview thumbnail column, and lazily by
     /// legacy items on first render. Wrapped in `autoreleasepool` so the transient
     /// NSImage / NSBitmapImageRep drop as soon as this returns.
-    static func generateThumbnail(_ data: Data, maxDimension: CGFloat = 72) -> Data? {
+    nonisolated static func generateThumbnail(_ data: Data, maxDimension: CGFloat = 72) -> Data? {
         autoreleasepool {
             guard let source = NSImage(data: data) else { return nil }
             let src = source.size
