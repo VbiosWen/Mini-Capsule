@@ -239,6 +239,7 @@ final class CapsuleWindowController: NSWindowController, NSWindowDelegate {
                     // NSHostingView.updateAnimatedWindowSize to fight our frame change,
                     // triggering a constraint-layout infinite loop (NSGenericException).
                     self.isExpanded = isExpanded
+                    NotificationCenter.default.post(name: .capsuleShouldPurgeCaches, object: nil)
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) { [weak self] in
                         guard let self = self, let window = self.window, !self.isExpanded else { return }
                         window.contentView?.layer?.cornerRadius = cornerRadius

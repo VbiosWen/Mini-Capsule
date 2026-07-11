@@ -52,4 +52,7 @@ extension Notification.Name {
     /// Posted after ClipboardMonitor inserts or mutates ClipItem records.
     /// Consumers (ClipboardListViewModel) use this to invalidate cached fetch results.
     static let clipItemsDidChange = Notification.Name("clipItemsDidChange")
+
+    /// Posted when the capsule collapses so consumers can drop heavy caches.
+    static let capsuleShouldPurgeCaches = Notification.Name("capsuleShouldPurgeCaches")
 }

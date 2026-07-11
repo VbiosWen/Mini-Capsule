@@ -53,6 +53,9 @@ struct CapsuleExpandedView: View {
                     capsuleViewModel.collapse()
                 }
             }
+            .onReceive(NotificationCenter.default.publisher(for: .capsuleShouldPurgeCaches)) { _ in
+                viewModel.purgeCache()
+            }
             .onReceive(NotificationCenter.default.publisher(for: .editTextItem)) { notification in
                 guard let itemID = notification.userInfo?["itemID"] as? UUID,
                       let content = notification.userInfo?["content"] as? String,
