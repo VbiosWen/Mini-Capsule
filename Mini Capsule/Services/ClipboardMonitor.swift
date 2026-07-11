@@ -91,6 +91,7 @@ final class ClipboardMonitor: ObservableObject {
                 if let existingItem = existing?.first {
                     existingItem.timestamp = Date()
                     try? context.save()
+                    NotificationCenter.default.post(name: .clipItemsDidChange, object: nil)
                     return
                 }
 
@@ -100,17 +101,20 @@ final class ClipboardMonitor: ObservableObject {
                 let sourceApp = NSWorkspace.shared.frontmostApplication?.bundleIdentifier
                 let appName = NSWorkspace.shared.frontmostApplication?.localizedName
                 let fileName = content.fileName ?? "\(appName ?? "未知")-\(UUID().uuidString.prefix(4))"
+                let thumbnail = Self.generateThumbnail(imageData)
 
                 let item = ClipItem(
                     timestamp: Date(),
                     contentTypeRaw: content.type,
                     imageData: imageData,
+                    imageThumbnail: thumbnail,
                     imageFileName: fileName,
                     imageMD5: md5,
                     sourceAppBundleID: sourceApp
                 )
                 context.insert(item)
                 try? context.save()
+                NotificationCenter.default.post(name: .clipItemsDidChange, object: nil)
                 return
             } else {
                 // No dedup — always insert
@@ -118,16 +122,19 @@ final class ClipboardMonitor: ObservableObject {
                 let sourceApp = NSWorkspace.shared.frontmostApplication?.bundleIdentifier
                 let appName = NSWorkspace.shared.frontmostApplication?.localizedName
                 let fileName = content.fileName ?? "\(appName ?? "未知")-\(UUID().uuidString.prefix(4))"
+                let thumbnail = Self.generateThumbnail(imageData)
                 let item = ClipItem(
                     timestamp: Date(),
                     contentTypeRaw: content.type,
                     imageData: imageData,
+                    imageThumbnail: thumbnail,
                     imageFileName: fileName,
                     imageMD5: Self.md5Hash(imageData),
                     sourceAppBundleID: sourceApp
                 )
                 context.insert(item)
                 try? context.save()
+                NotificationCenter.default.post(name: .clipItemsDidChange, object: nil)
                 return
             }
         }
@@ -141,6 +148,7 @@ final class ClipboardMonitor: ObservableObject {
                 case ("text", "text") where latest.textContent == content.text:
                     latest.timestamp = Date()
                     try? context.save()
+                    NotificationCenter.default.post(name: .clipItemsDidChange, object: nil)
                     return
                 default:
                     break
@@ -161,6 +169,7 @@ final class ClipboardMonitor: ObservableObject {
         )
         context.insert(item)
         try? context.save()
+        NotificationCenter.default.post(name: .clipItemsDidChange, object: nil)
     }
 
     private func readPasteboard(
@@ -222,12 +231,14 @@ final class ClipboardMonitor: ObservableObject {
     /// Convert NSImage to PNG Data. Used only in the fallback path
     /// (custom pasteboard types like WeChat) — known UTIs preserve original format.
     func nsImageToPNGData(_ nsImage: NSImage) -> Data {
-        let tiff = nsImage.tiffRepresentation
-        guard let tiff,
-              let bitmap = NSBitmapImageRep(data: tiff),
-              let png = bitmap.representation(using: .png, properties: [:])
-        else { return tiff ?? Data() }
-        return png
+        autoreleasepool {
+            let tiff = nsImage.tiffRepresentation
+            guard let tiff,
+                  let bitmap = NSBitmapImageRep(data: tiff),
+                  let png = bitmap.representation(using: .png, properties: [:])
+            else { return tiff ?? Data() }
+            return png
+        }
     }
 
     /// Decode `data`, redraw at `maxDimension` (longest side), and return PNG bytes.
@@ -280,24 +291,26 @@ final class ClipboardMonitor: ObservableObject {
     }
 
     private func capImageSize(_ data: Data, maxBytes: Int) -> Data {
-        guard data.count > maxBytes,
-              let image = NSImage(data: data) else { return data }
-        let scale = sqrt(Double(maxBytes) / Double(data.count))
-        let newSize = NSSize(
-            width: image.size.width * scale,
-            height: image.size.height * scale
-        )
-        let resized = NSImage(size: newSize)
-        resized.lockFocus()
-        image.draw(in: NSRect(origin: .zero, size: newSize),
-                   from: NSRect(origin: .zero, size: image.size),
-                   operation: .copy, fraction: 1.0)
-        resized.unlockFocus()
-        guard let tiff = resized.tiffRepresentation,
-              let bitmap = NSBitmapImageRep(data: tiff),
-              let jpeg = bitmap.representation(using: .jpeg, properties: [.compressionFactor: 0.7])
-        else { return data }
-        return jpeg
+        autoreleasepool {
+            guard data.count > maxBytes,
+                  let image = NSImage(data: data) else { return data }
+            let scale = sqrt(Double(maxBytes) / Double(data.count))
+            let newSize = NSSize(
+                width: image.size.width * scale,
+                height: image.size.height * scale
+            )
+            let resized = NSImage(size: newSize)
+            resized.lockFocus()
+            image.draw(in: NSRect(origin: .zero, size: newSize),
+                       from: NSRect(origin: .zero, size: image.size),
+                       operation: .copy, fraction: 1.0)
+            resized.unlockFocus()
+            guard let tiff = resized.tiffRepresentation,
+                  let bitmap = NSBitmapImageRep(data: tiff),
+                  let jpeg = bitmap.representation(using: .jpeg, properties: [.compressionFactor: 0.7])
+            else { return data }
+            return jpeg
+        }
     }
 
     static func enforceCap(context: ModelContext, maxCount: Int) {
