@@ -34,3 +34,17 @@ final class FakePasteboard: PasteboardReading, PasteboardWriting {
     @discardableResult func setPropertyList(_ p: Any, forType t: NSPasteboard.PasteboardType) -> Bool { clearCount += 1; writtenPropertyLists[t] = p; stubbedChangeCount += 1; return true }
     @discardableResult func writeObjects(_ objects: [NSPasteboardWriting]) -> Bool { clearCount += 1; writtenObjectCount += objects.count; stubbedChangeCount += 1; return true }
 }
+
+struct FakeWorkspace: FrontmostAppProviding {
+    var bundleID: String?
+    var appName: String?
+}
+
+struct FakeAccessibility: AccessibilityChecking {
+    let isTrusted: Bool
+}
+
+final class FakeKeyInjector: KeyInjecting {
+    private(set) var pasteCallCount = 0
+    func pasteViaCommandV() { pasteCallCount += 1 }
+}

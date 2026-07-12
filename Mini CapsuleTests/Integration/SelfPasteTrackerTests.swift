@@ -24,3 +24,24 @@ struct PasteboardSeamTests {
         #expect(fake.clearCount == 1)
     }
 }
+
+@Suite(.tags(.integration))
+struct SystemSeamTests {
+    @Test func fakeWorkspaceReturnsStubbedIdentity() {
+        let ws = FakeWorkspace(bundleID: "com.apple.Safari", appName: "Safari")
+        #expect(ws.bundleID == "com.apple.Safari")
+        #expect(ws.appName == "Safari")
+    }
+
+    @Test func fakeAccessibilityHonorsTrustFlag() {
+        #expect(FakeAccessibility(isTrusted: true).isTrusted)
+        #expect(!FakeAccessibility(isTrusted: false).isTrusted)
+    }
+
+    @Test func fakeKeyInjectorRecordsCalls() {
+        let k = FakeKeyInjector()
+        k.pasteViaCommandV()
+        k.pasteViaCommandV()
+        #expect(k.pasteCallCount == 2)
+    }
+}
