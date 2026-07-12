@@ -7,40 +7,16 @@ import Carbon
 
 @MainActor
 final class PasteService {
-    /// Track the set of changeCount values produced by our own copy/paste
-    /// operations. Using a set instead of a single value covers the entire
-    /// range from before clearContents() to after the final write, preventing
-    /// both false-positive suppression (leaking real copies) and false-negative
-    /// suppression (re-capturing our own writes).
-    private static var suppressedChangeCounts = Set<Int>()
+    // Suppression state now lives in SelfPasteTracker (injectable, testable).
+    static func beginSelfPaste() -> Int { NSPasteboard.general.changeCount }
 
-    /// Capture the current changeCount before we start writing to the pasteboard.
-    /// Call this BEFORE clearContents().
-    static func beginSelfPaste() -> Int {
-        return NSPasteboard.general.changeCount
-    }
-
-    /// After all writes complete, mark the entire range [begin, end] as suppressed.
-    /// Call this AFTER the final setString/setData/writeObjects.
     static func endSelfPaste(begin: Int) {
         let end = NSPasteboard.general.changeCount
-        suppressedChangeCounts.formUnion(Set(begin...end))
-        // Bound the set to prevent unbounded growth in edge cases.
-        if suppressedChangeCounts.count > 200 {
-            suppressedChangeCounts.removeAll()
-        }
+        SelfPasteTracker.shared.markRange(begin: begin, end: end)
     }
 
-    /// Returns true (and consumes the value) when `changeCount` is a change
-    /// we produced. Each value is consumed exactly once — if the monitor sees
-    /// the same changeCount again (e.g. due to a re-poll), the second call
-    /// returns false.
     static func shouldSuppress(changeCount: Int) -> Bool {
-        if suppressedChangeCounts.contains(changeCount) {
-            suppressedChangeCounts.remove(changeCount)
-            return true
-        }
-        return false
+        SelfPasteTracker.shared.shouldSuppress(changeCount: changeCount)
     }
 
     /// Resolve bookmarks → URLs and write them to the pasteboard as proper file references.

@@ -45,3 +45,22 @@ struct SystemSeamTests {
         #expect(k.pasteCallCount == 2)
     }
 }
+
+@Suite(.tags(.integration))
+struct SelfPasteTrackerTests {
+    @Test func suppressesMarkedRangeExactlyOnce() {
+        let t = SelfPasteTracker(maxEntries: 200)
+        t.markRange(begin: 10, end: 12)
+        #expect(t.shouldSuppress(changeCount: 11))          // in range
+        #expect(!t.shouldSuppress(changeCount: 11))         // consumed once
+        #expect(t.shouldSuppress(changeCount: 10))          // boundary low
+        #expect(t.shouldSuppress(changeCount: 12))          // boundary high
+        #expect(!t.shouldSuppress(changeCount: 13))         // outside
+    }
+
+    @Test func resetsWhenOverCapacity() {
+        let t = SelfPasteTracker(maxEntries: 5)
+        t.markRange(begin: 0, end: 100)   // 101 entries > 5 → cleared
+        #expect(!t.shouldSuppress(changeCount: 50))
+    }
+}
