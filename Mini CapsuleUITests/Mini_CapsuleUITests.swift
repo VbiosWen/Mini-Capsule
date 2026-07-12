@@ -28,7 +28,7 @@ final class Mini_CapsuleUITests: XCTestCase {
         app.launch()
 
         // App runs as accessory (no main window); verify it launched
-        XCTAssertTrue(app.wait(for: .running, timeout: 5))
+        XCTAssertTrue(app.wait(for: .runningForeground, timeout: 5))
     }
 
     @MainActor
