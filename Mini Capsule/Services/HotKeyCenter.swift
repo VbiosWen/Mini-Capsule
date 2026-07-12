@@ -43,51 +43,28 @@ enum HotKeyParser {
     ]
 }
 
-/// Registers system-wide hotkeys with Carbon. RegisterEventHotKey consumes the
-/// keystroke and needs no Input-Monitoring permission. Main-thread only.
+/// Parses shortcuts and delegates registration to a HotKeyRegistering seam.
 @MainActor
 final class HotKeyCenter {
-    private var refs: [EventHotKeyRef] = []
-    private var actions: [UInt32: () -> Void] = [:]
-    private var handler: EventHandlerRef?
-    private var nextID: UInt32 = 1
-    private static let signature: OSType = 0x4D435053 // 'MCPS'
+    private let registrar: HotKeyRegistering
 
-    func installHandlerIfNeeded() {
-        guard handler == nil else { return }
-        var spec = EventTypeSpec(eventClass: OSType(kEventClassKeyboard),
-                                 eventKind: UInt32(kEventHotKeyPressed))
-        let this = Unmanaged.passUnretained(self).toOpaque()
-        InstallEventHandler(GetApplicationEventTarget(), { _, event, userData -> OSStatus in
-            guard let userData, let event else { return OSStatus(eventNotHandledErr) }
-            var hkID = EventHotKeyID()
-            GetEventParameter(event, EventParamName(kEventParamDirectObject),
-                              EventParamType(typeEventHotKeyID), nil,
-                              MemoryLayout<EventHotKeyID>.size, nil, &hkID)
-            let center = Unmanaged<HotKeyCenter>.fromOpaque(userData).takeUnretainedValue()
-            // Carbon delivers on the main thread; hop to the main actor explicitly.
-            MainActor.assumeIsolated { center.actions[hkID.id]?() }
-            return noErr
-        }, 1, &spec, this, &handler)
+    /// Default initializer creates a Carbon-backed registrar on the main actor.
+    init() {
+        self.registrar = CarbonHotKeyRegistrar()
     }
+
+    /// Injected initializer for testing with a fake registrar.
+    init(registrar: HotKeyRegistering) {
+        self.registrar = registrar
+    }
+
+    /// Retained for existing call sites; the registrar installs its handler lazily.
+    func installHandlerIfNeeded() { /* registrar installs on first register */ }
 
     func register(_ shortcut: String, action: @escaping () -> Void) {
         guard let (keyCode, modifiers) = HotKeyParser.parse(shortcut) else { return }
-        let id = nextID; nextID += 1
-        let hkID = EventHotKeyID(signature: Self.signature, id: id)
-        var ref: EventHotKeyRef?
-        let status = RegisterEventHotKey(keyCode, modifiers, hkID,
-                                         GetApplicationEventTarget(), 0, &ref)
-        if status == noErr, let ref { refs.append(ref); actions[id] = action }
+        registrar.register(keyCode: keyCode, modifiers: modifiers, handler: action)
     }
 
-    func unregisterAll() {
-        for ref in refs { UnregisterEventHotKey(ref) }
-        refs.removeAll(); actions.removeAll()
-    }
-
-    deinit {
-        for ref in refs { UnregisterEventHotKey(ref) }
-        if let handler { RemoveEventHandler(handler) }
-    }
+    func unregisterAll() { registrar.unregisterAll() }
 }
