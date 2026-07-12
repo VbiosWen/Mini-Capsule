@@ -1,0 +1,22 @@
+{
+  "features": [
+    { "id": 1,  "name": "ClipboardMonitor — capture",      "tier": ["T2"],       "tests": [], "checklist": [], "status": "pending", "plan": "2026-07-12-seams-integration-plan" },
+    { "id": 2,  "name": "ClipboardMonitor — readPasteboard","tier": ["T1"],       "tests": [], "checklist": [], "status": "pending", "plan": "2026-07-12-backfill-capture-paste-plan" },
+    { "id": 3,  "name": "ClipboardMonitor — dedup/cap",     "tier": ["T1","T2"],  "tests": ["ClipboardMonitorTests"], "checklist": [], "status": "pending", "plan": "2026-07-12-backfill-capture-paste-plan" },
+    { "id": 4,  "name": "PasteService — suppression",       "tier": ["T1"],       "tests": ["PasteServiceTests"], "checklist": [], "status": "pending", "plan": "2026-07-12-backfill-capture-paste-plan" },
+    { "id": 5,  "name": "PasteService — copy/paste",        "tier": ["T1","T2"],  "tests": ["PasteServiceTests"], "checklist": ["M1","M2","M7"], "status": "pending", "plan": "2026-07-12-backfill-capture-paste-plan" },
+    { "id": 6,  "name": "HotKeyParser",                     "tier": ["T1"],       "tests": ["HotKeyParserTests"], "checklist": [], "status": "covered" },
+    { "id": 7,  "name": "HotKeyCenter",                     "tier": ["T2"],       "tests": [], "checklist": ["M3","M4"], "status": "pending", "plan": "2026-07-12-seams-integration-plan" },
+    { "id": 8,  "name": "Settings (Data/Store/Persistence)","tier": ["T1","T2"],  "tests": ["SettingsDataTests","SettingsPersistenceTests"], "checklist": [], "status": "pending", "plan": "2026-07-12-backfill-settings-viewmodels-plan" },
+    { "id": 9,  "name": "ClipboardListViewModel",           "tier": ["T1"],       "tests": ["ClipboardListViewModelTests"], "checklist": [], "status": "pending", "plan": "2026-07-12-backfill-settings-viewmodels-plan" },
+    { "id": 10, "name": "CapsuleViewModel",                 "tier": ["T1"],       "tests": ["CapsuleViewModelTests"], "checklist": [], "status": "pending", "plan": "2026-07-12-backfill-settings-viewmodels-plan" },
+    { "id": 11, "name": "MenuBarService",                   "tier": ["T2","T3"],  "tests": ["MenuBarServiceTests"], "checklist": ["M9"], "status": "pending", "plan": "2026-07-12-backfill-settings-viewmodels-plan" },
+    { "id": 12, "name": "FrequencyCleanupService",          "tier": ["T1"],       "tests": ["FrequencyCleanupServiceTests"], "checklist": [], "status": "pending", "plan": "2026-07-12-backfill-settings-viewmodels-plan" },
+    { "id": 13, "name": "CapsuleWindowController",          "tier": ["T3","T4"],  "tests": [], "checklist": ["M5","M6"], "status": "pending", "plan": "2026-07-12-backfill-settings-viewmodels-plan" },
+    { "id": 14, "name": "ColorHex",                         "tier": ["T1"],       "tests": ["ColorHexTests"], "checklist": [], "status": "covered" },
+    { "id": 15, "name": "App wiring / AppDelegate",         "tier": ["T3","T4"],  "tests": [], "checklist": ["M8"], "status": "pending", "plan": "2026-07-12-backfill-settings-viewmodels-plan" },
+    { "id": 16, "name": "Models (ClipItem/Item)",           "tier": ["T1"],       "tests": ["Mini_CapsuleTests"], "checklist": [], "status": "pending", "plan": "2026-07-12-backfill-settings-viewmodels-plan" },
+    { "id": 17, "name": "UI views x9",                      "tier": ["T3","T4"],  "tests": [], "checklist": ["M5","M6","M9"], "status": "pending", "plan": "2026-07-12-backfill-settings-viewmodels-plan" },
+    { "id": 18, "name": "Logging facade",                   "tier": ["T1"],       "tests": ["LogEventTests","LogFacadeTests","OSLogSinkTests","FileSinkTests","LogArchiveTests"], "checklist": [], "status": "covered" }
+  ]
+}
