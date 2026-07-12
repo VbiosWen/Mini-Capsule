@@ -3,7 +3,7 @@ import Foundation
 
 @Suite struct MetaCoverageTests {
     /// Toggle flipped to `true` in Plan 4 once every feature is covered.
-    static let requireAllCovered = false
+    static let requireAllCovered = true
 
     struct Feature: Decodable {
         let id: Int
