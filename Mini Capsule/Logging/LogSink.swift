@@ -28,6 +28,5 @@ final class Log: LogSink, @unchecked Sendable {
     }
 }
 
-// TEMP stubs — replaced by real files in Tasks 3 & 4.
-struct OSLogSink: LogSink { func write(_ event: LogEvent) {} }
+// TEMP stub — replaced by a real file in Task 4.
 final class FileSink: LogSink, @unchecked Sendable { func write(_ event: LogEvent) {} }
