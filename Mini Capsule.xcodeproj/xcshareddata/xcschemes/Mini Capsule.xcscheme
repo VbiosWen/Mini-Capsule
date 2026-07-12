@@ -46,6 +46,17 @@
                ReferencedContainer = "container:Mini Capsule.xcodeproj">
             </BuildableReference>
          </TestableReference>
+         <TestableReference
+            skipped = "NO"
+            parallelizable = "NO">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "FC9E13592FFABDA100C598E3"
+               BuildableName = "Mini CapsuleUITests.xctest"
+               BlueprintName = "Mini CapsuleUITests"
+               ReferencedContainer = "container:Mini Capsule.xcodeproj">
+            </BuildableReference>
+         </TestableReference>
       </Testables>
    </TestAction>
    <LaunchAction

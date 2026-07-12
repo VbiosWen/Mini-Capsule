@@ -31,8 +31,6 @@
       "target" : { "containerPath" : "container:Mini Capsule.xcodeproj", "identifier" : "Mini CapsuleTests", "name" : "Mini CapsuleTests" }
     },
     {
-      "enabled" : false,
-      "selectedConfigurations" : [ "C1D2E3F4-A5B6-7890-ABCD-EF0123456789" ],
       "target" : { "containerPath" : "container:Mini Capsule.xcodeproj", "identifier" : "Mini CapsuleUITests", "name" : "Mini CapsuleUITests" }
     }
   ],
