@@ -6,13 +6,13 @@ the named plan; Plan 4 flips `MetaCoverageTests.requireAllCovered` so no row may
 
 | # | Feature | Tier | Tests | Checklist | Status |
 |---|---------|------|-------|-----------|--------|
-| 1 | ClipboardMonitor — capture | T2 | — | — | pending (seams-integration) |
+| 1 | ClipboardMonitor — capture | T2 | CaptureFlowTests, MonitorConstructionTests | — | covered |
 | 2 | ClipboardMonitor — readPasteboard | T1 | — | — | pending (backfill-capture-paste) |
 | 3 | ClipboardMonitor — dedup/cap | T1,T2 | ClipboardMonitorTests | — | pending (backfill-capture-paste) |
 | 4 | PasteService — suppression | T1 | PasteServiceTests | — | pending (backfill-capture-paste) |
 | 5 | PasteService — copy/paste | T1,T2 | PasteServiceTests | M1,M2,M7 | pending (backfill-capture-paste) |
 | 6 | HotKeyParser | T1 | HotKeyParserTests | — | covered |
-| 7 | HotKeyCenter | T2 | — | M3,M4 | pending (seams-integration) |
+| 7 | HotKeyCenter | T2 | HotKeyCenterIntegrationTests | M3,M4 | covered |
 | 8 | Settings | T1,T2 | SettingsDataTests, SettingsPersistenceTests | — | pending (backfill-settings-viewmodels) |
 | 9 | ClipboardListViewModel | T1 | ClipboardListViewModelTests | — | pending (backfill-settings-viewmodels) |
 | 10 | CapsuleViewModel | T1 | CapsuleViewModelTests | — | pending (backfill-settings-viewmodels) |

@@ -1,12 +1,12 @@
 {
   "features": [
-    { "id": 1,  "name": "ClipboardMonitor — capture",      "tier": ["T2"],       "tests": [], "checklist": [], "status": "pending", "plan": "2026-07-12-seams-integration-plan" },
+    { "id": 1,  "name": "ClipboardMonitor — capture",      "tier": ["T2"],       "tests": ["CaptureFlowTests","MonitorConstructionTests"], "checklist": [], "status": "covered" },
     { "id": 2,  "name": "ClipboardMonitor — readPasteboard","tier": ["T1"],       "tests": [], "checklist": [], "status": "pending", "plan": "2026-07-12-backfill-capture-paste-plan" },
     { "id": 3,  "name": "ClipboardMonitor — dedup/cap",     "tier": ["T1","T2"],  "tests": ["ClipboardMonitorTests"], "checklist": [], "status": "pending", "plan": "2026-07-12-backfill-capture-paste-plan" },
     { "id": 4,  "name": "PasteService — suppression",       "tier": ["T1"],       "tests": ["PasteServiceTests"], "checklist": [], "status": "pending", "plan": "2026-07-12-backfill-capture-paste-plan" },
     { "id": 5,  "name": "PasteService — copy/paste",        "tier": ["T1","T2"],  "tests": ["PasteServiceTests"], "checklist": ["M1","M2","M7"], "status": "pending", "plan": "2026-07-12-backfill-capture-paste-plan" },
     { "id": 6,  "name": "HotKeyParser",                     "tier": ["T1"],       "tests": ["HotKeyParserTests"], "checklist": [], "status": "covered" },
-    { "id": 7,  "name": "HotKeyCenter",                     "tier": ["T2"],       "tests": [], "checklist": ["M3","M4"], "status": "pending", "plan": "2026-07-12-seams-integration-plan" },
+    { "id": 7,  "name": "HotKeyCenter",                     "tier": ["T2"],       "tests": ["HotKeyCenterIntegrationTests"], "checklist": ["M3","M4"], "status": "covered" },
     { "id": 8,  "name": "Settings (Data/Store/Persistence)","tier": ["T1","T2"],  "tests": ["SettingsDataTests","SettingsPersistenceTests"], "checklist": [], "status": "pending", "plan": "2026-07-12-backfill-settings-viewmodels-plan" },
     { "id": 9,  "name": "ClipboardListViewModel",           "tier": ["T1"],       "tests": ["ClipboardListViewModelTests"], "checklist": [], "status": "pending", "plan": "2026-07-12-backfill-settings-viewmodels-plan" },
     { "id": 10, "name": "CapsuleViewModel",                 "tier": ["T1"],       "tests": ["CapsuleViewModelTests"], "checklist": [], "status": "pending", "plan": "2026-07-12-backfill-settings-viewmodels-plan" },
