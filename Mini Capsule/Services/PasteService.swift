@@ -21,7 +21,7 @@ final class PasteService {
 
     /// Resolve bookmarks → URLs and write them to the pasteboard as proper file references.
     /// Uses NSPasteboardItem with explicit UTI types so Finder and other apps can paste the actual files.
-    private static func writeFileItemsToPasteboard(_ item: ClipItem, pasteboard: NSPasteboard) {
+    private static func writeFileItemsToPasteboard(_ item: ClipItem, pasteboard: PasteboardWriting) {
         guard let bookmarkData = item.fileBookmarks else { return }
 
         let bookmarks = Self.decodeFileBookmarks(bookmarkData)
@@ -97,81 +97,52 @@ final class PasteService {
         return [data]
     }
 
-    /// Copy item to clipboard only (no auto-paste). Updates usage stats.
-    static func copyToClipboard(_ item: ClipItem) {
-        let begin = beginSelfPaste()
-        let pasteboard = NSPasteboard.general
+    static func copyToClipboard(_ item: ClipItem,
+                                pasteboard: PasteboardWriting = NSPasteboard.general,
+                                selfPaste: SelfPasteTracker = .shared,
+                                log: LogSink = Log.shared) {
+        let begin = pasteboard.changeCount
         pasteboard.clearContents()
-
         switch item.contentTypeRaw {
-        case "text":
-            pasteboard.setString(item.textContent ?? "", forType: .string)
-        case "image":
-            if let data = item.imageData {
-                pasteboard.setData(data, forType: .png)
-            }
-        case "file":
-            writeFileItemsToPasteboard(item, pasteboard: pasteboard)
-        default:
-            break
+        case "text":  pasteboard.setString(item.textContent ?? "", forType: .string)
+        case "image": if let data = item.imageData { pasteboard.setData(data, forType: .png) }
+        case "file":  writeFileItemsToPasteboard(item, pasteboard: pasteboard)
+        default: break
         }
-
-        endSelfPaste(begin: begin)
+        let end = pasteboard.changeCount
+        selfPaste.markRange(begin: begin, end: end)
+        log.log(.paste, .info, "copyToClipboard", metadata: ["type": item.contentTypeRaw])
     }
 
-    static func paste(_ item: ClipItem, context: ModelContext) {
-        // Check accessibility permissions before attempting CGEvent simulation
-        let options: NSDictionary = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: false]
-        guard AXIsProcessTrustedWithOptions(options) else {
-            // Accessibility permissions not granted — paste will fail silently
+    static func paste(_ item: ClipItem,
+                      context: ModelContext,
+                      pasteboard: PasteboardWriting = NSPasteboard.general,
+                      accessibility: AccessibilityChecking = RealAccessibility(),
+                      keyInjector: KeyInjecting = RealKeyInjector(),
+                      selfPaste: SelfPasteTracker = .shared,
+                      log: LogSink = Log.shared) {
+        guard accessibility.isTrusted else {
+            log.log(.paste, .error, "paste skipped: accessibility not trusted",
+                    metadata: ["type": item.contentTypeRaw])
             return
         }
-
-        let begin = beginSelfPaste()
-        let pasteboard = NSPasteboard.general
+        let begin = pasteboard.changeCount
         pasteboard.clearContents()
-
         switch item.contentTypeRaw {
-        case "text":
-            pasteboard.setString(item.textContent ?? "", forType: .string)
-        case "image":
-            if let data = item.imageData {
-                pasteboard.setData(data, forType: .png)
-            }
-        case "file":
-            writeFileItemsToPasteboard(item, pasteboard: pasteboard)
-        default:
-            break
+        case "text":  pasteboard.setString(item.textContent ?? "", forType: .string)
+        case "image": if let data = item.imageData { pasteboard.setData(data, forType: .png) }
+        case "file":  writeFileItemsToPasteboard(item, pasteboard: pasteboard)
+        default: break
         }
+        let end = pasteboard.changeCount
+        selfPaste.markRange(begin: begin, end: end)
 
-        endSelfPaste(begin: begin)
+        keyInjector.pasteViaCommandV()
 
-        // Simulate Cmd+V via CGEvent
-        let source = CGEventSource(stateID: .combinedSessionState)
-
-        let cmdKey: CGKeyCode = 0x37
-        let vKey: CGKeyCode = Self.keyCodeForV()
-
-        let cmdDown = CGEvent(keyboardEventSource: source, virtualKey: cmdKey, keyDown: true)
-        let vDown = CGEvent(keyboardEventSource: source, virtualKey: vKey, keyDown: true)
-        let vUp = CGEvent(keyboardEventSource: source, virtualKey: vKey, keyDown: false)
-        let cmdUp = CGEvent(keyboardEventSource: source, virtualKey: cmdKey, keyDown: false)
-
-        let cmdFlag = CGEventFlags.maskCommand.rawValue
-        cmdDown?.flags = CGEventFlags(rawValue: cmdFlag)
-        vDown?.flags = CGEventFlags(rawValue: cmdFlag)
-        vUp?.flags = CGEventFlags(rawValue: cmdFlag)
-        cmdUp?.flags = CGEventFlags(rawValue: 0)
-
-        // Post events
-        cmdDown?.post(tap: CGEventTapLocation.cghidEventTap)
-        vDown?.post(tap: CGEventTapLocation.cghidEventTap)
-        vUp?.post(tap: CGEventTapLocation.cghidEventTap)
-        cmdUp?.post(tap: CGEventTapLocation.cghidEventTap)
-
-        // Update paste stats
         item.pasteCount += 1
         item.lastPastedAt = Date()
-        try? context.save()
+        do { try context.save() }
+        catch { log.log(.paste, .error, "paste stat save failed", metadata: ["error": "\(error)"]) }
+        log.log(.paste, .info, "paste", metadata: ["type": item.contentTypeRaw, "count": "\(item.pasteCount)"])
     }
 }
