@@ -7,18 +7,35 @@ import CryptoKit
 @MainActor
 final class ClipboardMonitor: ObservableObject {
     private let settings: SettingsProtocol
-    private var timer: Timer?
-    private var lastChangeCount: Int = NSPasteboard.general.changeCount
+    private let pasteboardSource: PasteboardReading
+    private let workspace: FrontmostAppProviding
+    private let scheduler: Scheduling
+    private let selfPaste: SelfPasteTracker
+    private let log: LogSink
+
+    private var timerToken: Cancellable?
+    private var lastChangeCount: Int
     private(set) var context: ModelContext?
 
     // Burst polling: after detecting a change, poll rapidly (3× @ 50 ms)
     // to catch successive Cmd+C presses that would otherwise be missed
     // between normal timer ticks.
     private var burstCount = 0
-    private var burstWorkItem: DispatchWorkItem?
+    private var burstToken: Cancellable?
 
-    init(settings: SettingsProtocol) {
+    init(settings: SettingsProtocol,
+         pasteboard: PasteboardReading = NSPasteboard.general,
+         workspace: FrontmostAppProviding = RealFrontmostApp(),
+         scheduler: Scheduling = RealScheduler(),
+         selfPaste: SelfPasteTracker = .shared,
+         log: LogSink = Log.shared) {
         self.settings = settings
+        self.pasteboardSource = pasteboard
+        self.workspace = workspace
+        self.scheduler = scheduler
+        self.selfPaste = selfPaste
+        self.log = log
+        self.lastChangeCount = pasteboard.changeCount
     }
 
     private var currentPollingInterval: TimeInterval {
@@ -44,17 +61,16 @@ final class ClipboardMonitor: ObservableObject {
 
     func start(context: ModelContext) {
         self.context = context
-        lastChangeCount = NSPasteboard.general.changeCount
+        lastChangeCount = pasteboardSource.changeCount
         restartTimer()
         observeSettings()
+        log.log(.capture, .info, "monitor started", metadata: ["interval": "\(currentPollingInterval)"])
     }
 
     private func restartTimer() {
-        timer?.invalidate()
-        timer = Timer.scheduledTimer(withTimeInterval: currentPollingInterval, repeats: true) { [weak self] _ in
-            Task { [weak self] in
-                self?.checkPasteboard()
-            }
+        timerToken?.cancel()
+        timerToken = scheduler.every(currentPollingInterval) { [weak self] in
+            self?.pollOnce()
         }
     }
 
@@ -66,14 +82,10 @@ final class ClipboardMonitor: ObservableObject {
             return
         }
         burstCount += 1
-        burstWorkItem?.cancel()
-        let workItem = DispatchWorkItem { [weak self] in
-            Task { @MainActor [weak self] in
-                self?.checkPasteboard()
-            }
+        burstToken?.cancel()
+        burstToken = scheduler.after(0.05) { [weak self] in
+            self?.pollOnce()
         }
-        burstWorkItem = workItem
-        DispatchQueue.main.asyncAfter(deadline: .now() + .milliseconds(50), execute: workItem)
     }
 
     private func observeSettings() {
@@ -87,134 +99,105 @@ final class ClipboardMonitor: ObservableObject {
     }
 
     func stop() {
-        timer?.invalidate()
-        timer = nil
+        timerToken?.cancel(); timerToken = nil
+        burstToken?.cancel(); burstToken = nil
         context = nil
     }
 
-    private func checkPasteboard() {
+    /// Thin polling entry point — checks changeCount, suppresses self-paste,
+    /// reads pasteboard, and dispatches to `apply`.
+    func pollOnce() {
         guard let context = context else { return }
-        let pasteboard = NSPasteboard.general
-        let currentChangeCount = pasteboard.changeCount
-
+        let currentChangeCount = pasteboardSource.changeCount
         guard currentChangeCount != lastChangeCount else { return }
         lastChangeCount = currentChangeCount
 
-        // Skip changes we produced ourselves (copy/paste), even across the poll gap.
-        if PasteService.shouldSuppress(changeCount: currentChangeCount) { return }
+        let cid = String(UUID().uuidString.prefix(4))
+        log.log(.capture, .debug, "changeCount changed",
+                metadata: ["to": "\(currentChangeCount)"], correlationID: cid)
 
-        guard let pbTypes = pasteboard.types,
-              let content = readPasteboard(pasteboard, types: pbTypes) else {
-            #if DEBUG
-            let available = pasteboard.types?.map(\.rawValue) ?? []
-            if !available.isEmpty {
-                NSLog("[MiniCapsule] Pasteboard changed (CC=%d) but no content read. Available types: %@",
-                      currentChangeCount, available.joined(separator: ", "))
-            }
-            #endif
-            // Still schedule burst — an intermediate clearContents may have
-            // emptied the board just before the real write.
+        if selfPaste.shouldSuppress(changeCount: currentChangeCount) {
+            log.log(.capture, .debug, "suppressed self-paste", correlationID: cid)
+            return
+        }
+
+        guard let pbTypes = pasteboardSource.types,
+              let content = readPasteboard(pasteboardSource, types: pbTypes) else {
+            log.log(.capture, .notice, "no content read", correlationID: cid)
             scheduleBurstPoll()
             return
         }
 
-        // MD5-based dedup for images
+        _ = apply(content, context: context, correlationID: cid)
+        scheduleBurstPoll()
+    }
+
+    /// Deterministic insert / dedup logic.  Returns the outcome so callers can
+    /// log or test the result.
+    @discardableResult
+    func apply(_ content: (type: String, text: String?, image: Data?, fileBookmarks: Data?, fileName: String?),
+               context: ModelContext,
+               correlationID cid: String) -> CaptureOutcome {
+        // ── Image path (MD5 dedup) ──
         if content.type == "image", let imageData = content.image {
             if isDedupEnabled {
                 let md5 = Self.md5Hash(imageData)
                 let imagePredicate = #Predicate<ClipItem> { $0.contentTypeRaw == "image" && $0.imageMD5 == md5 }
-                let existing = try? context.fetch(FetchDescriptor<ClipItem>(predicate: imagePredicate))
-                if let existingItem = existing?.first {
+                if let existing = try? context.fetch(FetchDescriptor<ClipItem>(predicate: imagePredicate)),
+                   let existingItem = existing.first {
                     existingItem.timestamp = Date()
                     try? context.save()
                     NotificationCenter.default.post(name: .clipItemsDidChange, object: nil)
-                    scheduleBurstPoll()
-                    return
-                }
-
-                // Enforce max count cap
-                Self.enforceCap(context: context, maxCount: maxHistoryCount)
-
-                let sourceApp = NSWorkspace.shared.frontmostApplication?.bundleIdentifier
-                let appName = NSWorkspace.shared.frontmostApplication?.localizedName
-                let fileName = content.fileName ?? "\(appName ?? "未知")-\(UUID().uuidString.prefix(4))"
-                let thumbnail = Self.generateThumbnail(imageData)
-
-                let item = ClipItem(
-                    timestamp: Date(),
-                    contentTypeRaw: content.type,
-                    imageData: imageData,
-                    imageThumbnail: thumbnail,
-                    imageFileName: fileName,
-                    imageMD5: md5,
-                    sourceAppBundleID: sourceApp
-                )
-                context.insert(item)
-                try? context.save()
-                NotificationCenter.default.post(name: .clipItemsDidChange, object: nil)
-                scheduleBurstPoll()
-                return
-            } else {
-                // No dedup — always insert
-                Self.enforceCap(context: context, maxCount: maxHistoryCount)
-                let sourceApp = NSWorkspace.shared.frontmostApplication?.bundleIdentifier
-                let appName = NSWorkspace.shared.frontmostApplication?.localizedName
-                let fileName = content.fileName ?? "\(appName ?? "未知")-\(UUID().uuidString.prefix(4))"
-                let thumbnail = Self.generateThumbnail(imageData)
-                let item = ClipItem(
-                    timestamp: Date(),
-                    contentTypeRaw: content.type,
-                    imageData: imageData,
-                    imageThumbnail: thumbnail,
-                    imageFileName: fileName,
-                    imageMD5: Self.md5Hash(imageData),
-                    sourceAppBundleID: sourceApp
-                )
-                context.insert(item)
-                try? context.save()
-                NotificationCenter.default.post(name: .clipItemsDidChange, object: nil)
-                scheduleBurstPoll()
-                return
-            }
-        }
-
-        // Text/image dedup by content (existing logic)
-        if isDedupEnabled {
-            if let latest = try? context.fetch(
-                FetchDescriptor<ClipItem>(sortBy: [SortDescriptor(\.timestamp, order: .reverse)])
-            ).first {
-                switch (latest.contentTypeRaw, content.type) {
-                case ("text", "text") where latest.textContent == content.text:
-                    latest.timestamp = Date()
-                    try? context.save()
-                    NotificationCenter.default.post(name: .clipItemsDidChange, object: nil)
-                    scheduleBurstPoll()
-                    return
-                default:
-                    break
+                    log.log(.dedup, .info, "image dedup hit", metadata: ["md5": String(md5.prefix(8))], correlationID: cid)
+                    return .dedupedImage
                 }
             }
+            Self.enforceCap(context: context, maxCount: maxHistoryCount)
+            let fileName = content.fileName ?? "\(workspace.appName ?? "未知")-\(UUID().uuidString.prefix(4))"
+            let thumbnail = Self.generateThumbnail(imageData)
+            let item = ClipItem(timestamp: Date(), contentTypeRaw: content.type,
+                                imageData: imageData, imageThumbnail: thumbnail,
+                                imageFileName: fileName, imageMD5: Self.md5Hash(imageData),
+                                sourceAppBundleID: workspace.bundleID)
+            context.insert(item)
+            try? context.save()
+            NotificationCenter.default.post(name: .clipItemsDidChange, object: nil)
+            log.log(.store, .info, "inserted image", metadata: ["bytes": "\(imageData.count)"], correlationID: cid)
+            return .inserted(type: "image")
         }
 
-        // Enforce max count cap
+        // ── Text dedup vs latest ──
+        if isDedupEnabled, content.type == "text",
+           let latest = try? context.fetch(
+               FetchDescriptor<ClipItem>(sortBy: [SortDescriptor(\.timestamp, order: .reverse)])).first,
+           latest.contentTypeRaw == "text", latest.textContent == content.text {
+            latest.timestamp = Date()
+            try? context.save()
+            NotificationCenter.default.post(name: .clipItemsDidChange, object: nil)
+            log.log(.dedup, .info, "text dedup hit", correlationID: cid)
+            return .dedupedText
+        }
+
+        // ── Insert (text / file) ──
         Self.enforceCap(context: context, maxCount: maxHistoryCount)
-
-        let item = ClipItem(
-            timestamp: Date(),
-            contentTypeRaw: content.type,
-            textContent: content.text,
-            imageFileName: content.type == "file" ? content.fileName : nil,
-            fileBookmarks: content.fileBookmarks,
-            sourceAppBundleID: NSWorkspace.shared.frontmostApplication?.bundleIdentifier
-        )
+        let item = ClipItem(timestamp: Date(), contentTypeRaw: content.type,
+                            textContent: content.text,
+                            imageFileName: content.type == "file" ? content.fileName : nil,
+                            fileBookmarks: content.fileBookmarks,
+                            sourceAppBundleID: workspace.bundleID)
         context.insert(item)
         try? context.save()
         NotificationCenter.default.post(name: .clipItemsDidChange, object: nil)
-        scheduleBurstPoll()
+        log.log(.store, .info, "inserted \(content.type)", correlationID: cid)
+        return .inserted(type: content.type)
     }
 
-    private func readPasteboard(
-        _ pb: NSPasteboard,
+    enum CaptureOutcome: Equatable {
+        case skipped, dedupedText, dedupedImage, inserted(type: String)
+    }
+
+    func readPasteboard(
+        _ pb: PasteboardReading,
         types: [NSPasteboard.PasteboardType]
     ) -> (type: String, text: String?, image: Data?, fileBookmarks: Data?, fileName: String?)? {
         // ── nspasteboard.org community standards ──────────────────────────
@@ -389,7 +372,7 @@ final class ClipboardMonitor: ObservableObject {
         }
     }
 
-    private func extractFileName(from pb: NSPasteboard, types: [NSPasteboard.PasteboardType]) -> String? {
+    func extractFileName(from pb: PasteboardReading, types: [NSPasteboard.PasteboardType]) -> String? {
         // Try to extract filename if fileURL is also present alongside the image
         if types.contains(.fileURL),
            let urls = pb.readObjects(forClasses: [NSURL.self], options: nil) as? [URL],

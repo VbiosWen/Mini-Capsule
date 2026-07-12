@@ -1,6 +1,7 @@
 import Testing
 import Foundation
 import AppKit
+import SwiftData
 @testable import Mini_Capsule
 
 @Suite(.tags(.integration))
@@ -62,5 +63,37 @@ struct SelfPasteTrackerTests {
         let t = SelfPasteTracker(maxEntries: 5)
         t.markRange(begin: 0, end: 100)   // 101 entries > 5 → cleared
         #expect(!t.shouldSuppress(changeCount: 50))
+    }
+}
+
+// MARK: - MonitorConstructionTests
+
+/// Minimal settings stub for construction (full flow uses the shared MockSettings in Task 7).
+final class MockSettingsForSeams: SettingsProtocol {
+    var historyMaxCount = 200; var imageMaxSizeMB = 2; var pollingInterval = 0.5
+    var cleanupOnStartup = true; var dedupEnabled = true
+    var showHideShortcut = ""; var quickPasteShortcut = ""; var togglePinShortcut = ""
+    var iCloudSyncEnabled = false; var launchAtLogin = false
+    var showInMenuBar = true; var showFloatingPanel = true
+    var collapsedStyle = "capsule"; var hoverExpandDelay = 0.3; var hoverCollapseDelay = 1.0
+    var panelOpacityUnfocused = 0.6; var backgroundImageData = Data(); var ringDiameter = 30.0
+    var capsuleWindowFrame = Data()
+    func resetAll() {}
+    func exportData(context: ModelContext) -> Data? { nil }
+    func importData(_ data: Data, context: ModelContext) throws {}
+    func clearAllHistory(context: ModelContext) {}
+}
+
+@MainActor
+@Suite(.tags(.integration))
+struct MonitorConstructionTests {
+    @Test func monitorAcceptsInjectedSeams() {
+        let m = ClipboardMonitor(settings: MockSettingsForSeams(),
+                                 pasteboard: FakePasteboard(),
+                                 workspace: FakeWorkspace(bundleID: "x", appName: "X"),
+                                 scheduler: FakeScheduler(),
+                                 selfPaste: SelfPasteTracker(),
+                                 log: InMemoryLogSink())
+        #expect(m.context == nil)   // not started yet
     }
 }
