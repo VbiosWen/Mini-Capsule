@@ -393,7 +393,7 @@ final class ClipboardMonitor: ObservableObject {
         CryptoKit.Insecure.MD5.hash(data: data).compactMap { String(format: "%02x", $0) }.joined()
     }
 
-    private func capImageSize(_ data: Data, maxBytes: Int) -> Data {
+    func capImageSize(_ data: Data, maxBytes: Int) -> Data {
         autoreleasepool {
             guard data.count > maxBytes,
                   let image = NSImage(data: data) else { return data }
