@@ -43,6 +43,12 @@ class CapsuleAppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func finishSetup() {
+        // Startup safety: prevent "invisible app" — if both display modes are
+        // off the user has no way to access this accessory app (no Dock icon).
+        if !settingsStore.showInMenuBar && !settingsStore.showFloatingPanel {
+            settingsStore.showInMenuBar = true
+        }
+
         // Frequency cleanup on startup (only if enabled)
         if settingsStore.cleanupOnStartup {
             FrequencyCleanupService.performCleanup(
@@ -52,9 +58,11 @@ class CapsuleAppDelegate: NSObject, NSApplicationDelegate {
             )
         }
 
-        // Create capsule window
+        // Create capsule window — respect showFloatingPanel setting
         let controller = CapsuleWindowController(modelContainer: Self.sharedModelContainer, settingsStore: settingsStore)
-        controller.showWindow()
+        if settingsStore.showFloatingPanel {
+            controller.showWindow()
+        }
         capsuleWindowController = controller
 
         // Start clipboard monitoring
@@ -62,7 +70,7 @@ class CapsuleAppDelegate: NSObject, NSApplicationDelegate {
         monitor.start(context: Self.sharedModelContainer.mainContext)
         clipboardMonitor = monitor
 
-        // Start menu bar
+        // Start menu bar — MenuBarService.start() respects showInMenuBar
         let menuBar = MenuBarService(settings: settingsStore)
         menuBar.start(context: Self.sharedModelContainer.mainContext)
         menuBarService = menuBar
@@ -78,6 +86,15 @@ class CapsuleAppDelegate: NSObject, NSApplicationDelegate {
             } else {
                 self?.capsuleWindowController?.window?.orderOut(nil)
             }
+        }
+
+        NotificationCenter.default.addObserver(
+            forName: .showInMenuBarChanged,
+            object: nil,
+            queue: .main
+        ) { [weak self] notification in
+            guard let show = notification.userInfo?["show"] as? Bool else { return }
+            self?.menuBarService?.updateVisibility(show)
         }
 
         registerShortcuts()
@@ -122,6 +139,21 @@ class CapsuleAppDelegate: NSObject, NSApplicationDelegate {
         guard let latest = items?.first else { return }
         latest.isPinned.toggle()
         try? context.save()
+    }
+
+    func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
+        // When the user clicks the app icon while already running, toggle the
+        // capsule expansion instead of showing the Settings window.
+        if let controller = capsuleWindowController, controller.window?.isVisible == true {
+            // Capsule is visible — post a notification so the view can expand
+            NotificationCenter.default.post(
+                name: .capsuleShouldToggleExpand,
+                object: nil
+            )
+        } else {
+            capsuleWindowController?.showWindow()
+        }
+        return false // Prevent default behavior (showing Settings window)
     }
 
     func applicationWillTerminate(_ notification: Notification) {

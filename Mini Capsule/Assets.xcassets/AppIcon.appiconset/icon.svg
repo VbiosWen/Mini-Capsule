@@ -1,0 +1,69 @@
+<svg viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0.5" y1="0" x2="0.5" y2="1">
+      <stop offset="0" stop-color="#1E293B"/>
+      <stop offset="0.55" stop-color="#0F172A"/>
+      <stop offset="1" stop-color="#020617"/>
+    </linearGradient>
+    <linearGradient id="bgTop" x1="0.5" y1="0" x2="0.5" y2="1">
+      <stop offset="0" stop-color="#FFFFFF" stop-opacity="0.18"/>
+      <stop offset="0.4" stop-color="#FFFFFF" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="glass" x1="0.5" y1="0" x2="0.5" y2="1">
+      <stop offset="0" stop-color="#FFFFFF" stop-opacity="0.98"/>
+      <stop offset="0.5" stop-color="#F1F5F9" stop-opacity="0.94"/>
+      <stop offset="1" stop-color="#CBD5E1" stop-opacity="0.88"/>
+    </linearGradient>
+    <linearGradient id="sheen" x1="0.5" y1="0" x2="0.5" y2="1">
+      <stop offset="0" stop-color="#FFFFFF" stop-opacity="0.9"/>
+      <stop offset="1" stop-color="#FFFFFF" stop-opacity="0"/>
+    </linearGradient>
+    <radialGradient id="dotGlow" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#4ADE80" stop-opacity="0.9"/>
+      <stop offset="0.4" stop-color="#22C55E" stop-opacity="0.4"/>
+      <stop offset="1" stop-color="#22C55E" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="dot" cx="0.4" cy="0.35" r="0.7">
+      <stop offset="0" stop-color="#86EFAC"/>
+      <stop offset="0.55" stop-color="#22C55E"/>
+      <stop offset="1" stop-color="#15803D"/>
+    </radialGradient>
+    <radialGradient id="ambient" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#38BDF8" stop-opacity="0.22"/>
+      <stop offset="1" stop-color="#38BDF8" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="softShadow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="24"/>
+    </filter>
+    <filter id="dotBlur" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="20"/>
+    </filter>
+    <clipPath id="squircle">
+      <rect x="100" y="100" width="824" height="824" rx="185" ry="185"/>
+    </clipPath>
+  </defs>
+
+  <g clip-path="url(#squircle)">
+    <rect x="100" y="100" width="824" height="824" fill="url(#bg)"/>
+    <rect x="100" y="100" width="824" height="360" fill="url(#bgTop)"/>
+    <ellipse cx="512" cy="512" rx="440" ry="180" fill="url(#ambient)" filter="url(#softShadow)"/>
+
+    <g transform="translate(512,512)">
+      <ellipse cx="0" cy="120" rx="320" ry="18" fill="#000000" opacity="0.55" filter="url(#softShadow)"/>
+
+      <rect x="-310" y="-92" width="620" height="184" rx="92" fill="url(#glass)"/>
+      <rect x="-308" y="-90" width="616" height="180" rx="90" fill="none" stroke="#FFFFFF" stroke-width="1.5" opacity="0.7"/>
+      <rect x="-310" y="-92" width="620" height="184" rx="92" fill="none" stroke="#0F172A" stroke-width="1.5" opacity="0.15"/>
+
+      <path d="M -240 -80 A 60 60 0 0 1 -180 -92 L 180 -92 A 60 60 0 0 1 240 -80 L 240 -40 L -240 -40 Z"
+            fill="url(#sheen)" opacity="0.75"/>
+
+      <circle cx="-220" cy="0" r="76" fill="url(#dotGlow)" filter="url(#dotBlur)"/>
+      <circle cx="-220" cy="0" r="40" fill="url(#dot)"/>
+      <ellipse cx="-228" cy="-12" rx="14" ry="8" fill="#FFFFFF" opacity="0.65"/>
+
+      <rect x="-156" y="-26" width="336" height="18" rx="9" fill="#334155" opacity="0.9"/>
+      <rect x="-156" y="12" width="220" height="14" rx="7" fill="#64748B" opacity="0.75"/>
+    </g>
+  </g>
+</svg>

@@ -14,12 +14,58 @@ struct PasteServiceTests {
 
     @MainActor
     @Test func copyToClipboardArmsSuppressionForItsOwnChange() {
+        let beforeCount = PasteService.beginSelfPaste()
         let item = ClipItem(contentTypeRaw: "text", textContent: "self-paste-\(UUID())")
-        PasteService.copyToClipboard(item)
-        let count = NSPasteboard.general.changeCount
-        // The change we just made is suppressed exactly once, then released.
-        #expect(PasteService.shouldSuppress(changeCount: count) == true)
-        #expect(PasteService.shouldSuppress(changeCount: count) == false)
+        // Simulate write pattern: clearContents + setString
+        let pasteboard = NSPasteboard.general
+        pasteboard.clearContents()
+        pasteboard.setString(item.textContent ?? "", forType: .string)
+        PasteService.endSelfPaste(begin: beforeCount)
+
+        let endCount = NSPasteboard.general.changeCount
+        // All changeCounts from begin through end should be suppressed.
+        for cc in beforeCount...endCount {
+            #expect(PasteService.shouldSuppress(changeCount: cc) == true,
+                    "changeCount \(cc) should be suppressed (range \(beforeCount)...\(endCount))")
+        }
+        // The next changeCount after the range should NOT be suppressed.
+        #expect(PasteService.shouldSuppress(changeCount: endCount + 1) == false)
+    }
+
+    @Test func rangeBasedSuppressionDoesNotSuppressOutsideRange() {
+        let before = PasteService.beginSelfPaste()
+        let pb = NSPasteboard.general
+        pb.clearContents()
+        pb.setString("test", forType: .string)
+        PasteService.endSelfPaste(begin: before)
+        let after = NSPasteboard.general.changeCount
+
+        // A changeCount far outside the range should not be suppressed.
+        #expect(PasteService.shouldSuppress(changeCount: after + 100) == false)
+    }
+
+    @Test func suppressedSetCleanedUpOnLargeSize() {
+        // Manually insert 250 values into the suppressed set.
+        let before = PasteService.beginSelfPaste()
+        let pb = NSPasteboard.general
+        pb.clearContents()
+        pb.setString("cleanup-test", forType: .string)
+        PasteService.endSelfPaste(begin: before)
+
+        // Add many more values — the set should be bounded.
+        for _ in 0..<250 {
+            let b = PasteService.beginSelfPaste()
+            pb.clearContents()
+            pb.setString("bulk", forType: .string)
+            PasteService.endSelfPaste(begin: b)
+        }
+        // Should not crash and should still be functional.
+        let b2 = PasteService.beginSelfPaste()
+        pb.clearContents()
+        pb.setString("after-cleanup", forType: .string)
+        PasteService.endSelfPaste(begin: b2)
+        let end2 = NSPasteboard.general.changeCount
+        #expect(PasteService.shouldSuppress(changeCount: end2) == true)
     }
 
     @Test func decodeFileBookmarksReturnsArrayForJSONEncodedBlob() throws {

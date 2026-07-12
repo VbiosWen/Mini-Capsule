@@ -47,6 +47,17 @@ struct ClipItemRow: View {
             Spacer()
 
             if isHovering && isInteractive && !isMultiSelectMode {
+                if item.contentTypeRaw == "text" || item.contentTypeRaw == "image" {
+                    Button {
+                        showPopover.toggle()
+                    } label: {
+                        Image(systemName: "eye")
+                            .foregroundColor(.secondary)
+                            .font(.system(size: 13))
+                    }
+                    .buttonStyle(.plain)
+                    .help("预览")
+                }
                 Button(action: onDelete) {
                     Image(systemName: "xmark.circle.fill")
                         .foregroundColor(.secondary)
@@ -97,17 +108,20 @@ struct ClipItemRow: View {
         .onHover { hovering in
             if hovering {
                 hoverTask?.cancel()
+                // Returning onto the row (e.g. from an open preview popover)
+                // closes the preview so a single click copies immediately.
+                showPopover = false
                 hoverTask = Task {
                     try? await Task.sleep(for: .milliseconds(200))  // U2: debounce
                     guard !Task.isCancelled else { return }
                     isHovering = true
-                    showPopover = true
                 }
             } else {
                 hoverTask?.cancel()
                 isHovering = false
-                // Delay popover dismissal. If the mouse is currently hovering
-                // the popover, don't dismiss — the popover's own hover exit will handle it.
+                // Preview is opened deliberately via the eye button. Give the
+                // pointer a grace period to travel onto the popover before
+                // dismissing; if it's already on the popover, keep it open.
                 hoverTask = Task {
                     try? await Task.sleep(for: .milliseconds(500))
                     guard !Task.isCancelled else { return }

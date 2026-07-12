@@ -1,0 +1,18 @@
+# Build
+DerivedData/
+build/
+default.profraw
+
+# DMG
+*.dmg
+
+# Xcode
+*.xcworkspace/xcuserdata/
+*.xcodeproj/xcuserdata/
+*.xcodeproj/project.xcworkspace/xcuserdata/
+
+# Test
+TestResults/
+
+# macOS
+.DS_Store

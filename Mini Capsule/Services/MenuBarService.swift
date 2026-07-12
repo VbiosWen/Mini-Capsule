@@ -4,11 +4,10 @@ import SwiftUI
 import SwiftData
 
 @MainActor
-final class MenuBarService: NSObject, NSMenuDelegate {
+final class MenuBarService {
     private var statusItem: NSStatusItem?
     private var context: ModelContext?
-    private var menu: NSMenu?
-    private var mouseMonitor: Any?
+    private var popover: NSPopover?
     private let settings: SettingsProtocol
 
     init(settings: SettingsProtocol) {
@@ -18,40 +17,34 @@ final class MenuBarService: NSObject, NSMenuDelegate {
     func start(context: ModelContext) {
         self.context = context
         let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
-        item.button?.title = "📋"
+        if let icon = Self.menuBarIcon() {
+            item.button?.image = icon
+        } else {
+            item.button?.title = "📋"
+        }
         statusItem = item
 
-        rebuildMenu()
-        statusItem?.button?.action = nil
+        // Respect initial visibility setting
+        statusItem?.isVisible = settings.showInMenuBar
+
+        // Use target/action for left-click to toggle the popover
+        statusItem?.button?.target = self
+        statusItem?.button?.action = #selector(statusItemClicked)
         statusItem?.button?.sendAction(on: [.leftMouseDown])
 
-        // Use mouseDown to show menu
-        mouseMonitor = NSEvent.addLocalMonitorForEvents(matching: .leftMouseDown) { [weak self] event in
-            guard let self = self,
-                  let button = self.statusItem?.button,
-                  event.window == button.window else { return event }
-            self.rebuildMenu()
-            self.statusItem?.menu = self.menu
-            button.performClick(nil)
-            self.statusItem?.menu = nil
-            return nil
-        }
-
-        // Observe clipboard changes to refresh menu
+        // Observe clipboard changes to allow refresh on next open
         NotificationCenter.default.addObserver(
             forName: UserDefaults.didChangeNotification,
             object: nil,
             queue: .main
         ) { [weak self] _ in
-            // Refresh menu on next open
+            // Refresh happens naturally on next popover open via fresh fetch
         }
     }
 
     func stop() {
-        if let monitor = mouseMonitor {
-            NSEvent.removeMonitor(monitor)
-            mouseMonitor = nil
-        }
+        popover?.close()
+        popover = nil
         if let item = statusItem {
             NSStatusBar.system.removeStatusItem(item)
         }
@@ -62,74 +55,78 @@ final class MenuBarService: NSObject, NSMenuDelegate {
         statusItem?.isVisible = visible
     }
 
-    private func rebuildMenu() {
-        let menu = NSMenu()
-        menu.delegate = self
+    /// The app icon scaled for the status bar. Works on a copy so the shared
+    /// `NSImage(named:)` cache keeps its original size.
+    static func menuBarIcon() -> NSImage? {
+        let source = NSImage(named: "AppIcon") ?? NSApplication.shared.applicationIconImage
+        guard let icon = source?.copy() as? NSImage else { return nil }
+        icon.size = NSSize(width: 18, height: 18)
+        return icon
+    }
 
-        guard let context = context else { return }
+    // MARK: - Popover
 
-        let showFloating = settings.showFloatingPanel
+    @objc private func statusItemClicked() {
+        if let popover = popover, popover.isShown {
+            popover.close()
+            self.popover = nil
+        } else {
+            showPopover()
+        }
+    }
 
-        // Recent items
+    private func showPopover() {
+        guard let button = statusItem?.button, let context = context else { return }
+
+        // Fetch all items, newest first
         let descriptor = FetchDescriptor<ClipItem>(
             sortBy: [SortDescriptor(\.timestamp, order: .reverse)]
         )
-        let recentItems = (try? context.fetch(descriptor))?.prefix(5) ?? []
+        let items = (try? context.fetch(descriptor)) ?? []
 
-        for item in recentItems {
-            let preview = previewText(for: item)
-            let menuItem = NSMenuItem(title: preview, action: #selector(menuItemClicked(_:)), keyEquivalent: "")
-            menuItem.representedObject = item
-            menuItem.target = self
-            menu.addItem(menuItem)
-        }
+        let popover = NSPopover()
+        popover.behavior = .transient
+        popover.contentSize = NSSize(width: 300, height: 400)
+        popover.animates = true
 
-        if !recentItems.isEmpty {
-            menu.addItem(.separator())
-        }
+        let contentView = MenuBarPopoverView(
+            items: items,
+            showFloatingPanel: settings.showFloatingPanel,
+            onSelect: { [weak self] item in
+                self?.selectItem(item)
+            },
+            onToggleFloating: { [weak self] in
+                self?.toggleFloatingPanel()
+                self?.popover?.close()
+                self?.popover = nil
+            },
+            onSettings: { [weak self] in
+                self?.openSettings()
+                self?.popover?.close()
+                self?.popover = nil
+            },
+            onQuit: { [weak self] in
+                self?.quitApp()
+            }
+        )
 
-        // Toggle floating panel
-        let toggleTitle = showFloating ? "隐藏悬浮窗" : "打开悬浮窗"
-        let toggleItem = NSMenuItem(title: toggleTitle, action: #selector(toggleFloatingPanel), keyEquivalent: "")
-        toggleItem.target = self
-        menu.addItem(toggleItem)
+        let hostingController = NSHostingController(rootView: contentView)
+        popover.contentViewController = hostingController
+        popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
 
-        // Settings
-        let settingsItem = NSMenuItem(title: "设置...", action: #selector(openSettings), keyEquivalent: ",")
-        settingsItem.target = self
-        menu.addItem(settingsItem)
-
-        menu.addItem(.separator())
-
-        // Quit
-        let quitItem = NSMenuItem(title: "退出 Mini Capsule", action: #selector(quitApp), keyEquivalent: "q")
-        quitItem.target = self
-        menu.addItem(quitItem)
-
-        self.menu = menu
+        self.popover = popover
     }
 
-    private func previewText(for item: ClipItem) -> String {
-        switch item.contentTypeRaw {
-        case "text":
-            let text = item.textContent?.prefix(30).replacingOccurrences(of: "\n", with: " ") ?? ""
-            return "📝 \(text)"
-        case "image":
-            return "🖼️ \(item.imageFileName ?? "图片")"
-        case "file":
-            return "📁 文件"
-        default:
-            return "未知"
-        }
-    }
-
-    @objc private func menuItemClicked(_ sender: NSMenuItem) {
-        guard let item = sender.representedObject as? ClipItem else { return }
+    private func selectItem(_ item: ClipItem) {
         PasteService.copyToClipboard(item)
         item.pasteCount += 1
         item.lastPastedAt = Date()
         try? context?.save()
+        popover?.close()
+        popover = nil
     }
+
+    // MARK: - Actions
 
     @objc private func toggleFloatingPanel() {
         let current = settings.showFloatingPanel
@@ -142,10 +139,18 @@ final class MenuBarService: NSObject, NSMenuDelegate {
     }
 
     @objc private func openSettings() {
+        // Accessory apps aren't the active app when a status-bar popover is
+        // clicked, so `showSettingsWindow:` would open the Settings window
+        // behind everything (or not at all). Activate first — matches the
+        // pattern in CapsuleWindowController before makeKey().
+        NSApp.activate(ignoringOtherApps: true)
+        // Send directly to NSApp instead of through the responder chain.
+        // When the popover is open, the first responder is inside the
+        // popover's content view, and the action may not reach NSApp.
         if #available(macOS 14.0, *) {
-            NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
+            NSApp.sendAction(Selector(("showSettingsWindow:")), to: NSApp, from: nil)
         } else {
-            NSApp.sendAction(Selector(("showPreferencesWindow:")), to: nil, from: nil)
+            NSApp.sendAction(Selector(("showPreferencesWindow:")), to: NSApp, from: nil)
         }
     }
 

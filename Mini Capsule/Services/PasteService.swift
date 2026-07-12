@@ -7,21 +7,70 @@ import Carbon
 
 @MainActor
 final class PasteService {
-    /// The pasteboard changeCount produced by our own copy/paste, so the
-    /// monitor can skip exactly that change even though it polls asynchronously.
-    private static var suppressedChangeCount: Int?
+    /// Track the set of changeCount values produced by our own copy/paste
+    /// operations. Using a set instead of a single value covers the entire
+    /// range from before clearContents() to after the final write, preventing
+    /// both false-positive suppression (leaking real copies) and false-negative
+    /// suppression (re-capturing our own writes).
+    private static var suppressedChangeCounts = Set<Int>()
 
-    static func markSelfPaste() {
-        suppressedChangeCount = NSPasteboard.general.changeCount
+    /// Capture the current changeCount before we start writing to the pasteboard.
+    /// Call this BEFORE clearContents().
+    static func beginSelfPaste() -> Int {
+        return NSPasteboard.general.changeCount
     }
 
-    /// Returns true (and consumes the token) when `changeCount` is the change we produced.
+    /// After all writes complete, mark the entire range [begin, end] as suppressed.
+    /// Call this AFTER the final setString/setData/writeObjects.
+    static func endSelfPaste(begin: Int) {
+        let end = NSPasteboard.general.changeCount
+        suppressedChangeCounts.formUnion(Set(begin...end))
+        // Bound the set to prevent unbounded growth in edge cases.
+        if suppressedChangeCounts.count > 200 {
+            suppressedChangeCounts.removeAll()
+        }
+    }
+
+    /// Returns true (and consumes the value) when `changeCount` is a change
+    /// we produced. Each value is consumed exactly once — if the monitor sees
+    /// the same changeCount again (e.g. due to a re-poll), the second call
+    /// returns false.
     static func shouldSuppress(changeCount: Int) -> Bool {
-        if suppressedChangeCount == changeCount {
-            suppressedChangeCount = nil
+        if suppressedChangeCounts.contains(changeCount) {
+            suppressedChangeCounts.remove(changeCount)
             return true
         }
         return false
+    }
+
+    /// Resolve bookmarks → URLs and write them to the pasteboard as proper file references.
+    /// Uses NSPasteboardItem with explicit UTI types so Finder and other apps can paste the actual files.
+    private static func writeFileItemsToPasteboard(_ item: ClipItem, pasteboard: NSPasteboard) {
+        guard let bookmarkData = item.fileBookmarks else { return }
+
+        let bookmarks = Self.decodeFileBookmarks(bookmarkData)
+        var isStale = false
+        let urls: [URL] = bookmarks.compactMap {
+            try? URL(resolvingBookmarkData: $0, options: [], bookmarkDataIsStale: &isStale)
+        }
+        guard !urls.isEmpty else { return }
+
+        // Also set the legacy file-names type for older apps that expect it.
+        // NSFilenamesPboardType = "NSFilenamesPboardType"
+        pasteboard.setPropertyList(
+            urls.map { $0.path },
+            forType: NSPasteboard.PasteboardType("NSFilenamesPboardType")
+        )
+
+        // Write each file URL as an explicit NSPasteboardItem for maximum compatibility.
+        let pbItems: [NSPasteboardItem] = urls.map { url in
+            let pbItem = NSPasteboardItem()
+            // The UTI for a file URL on pasteboard is public.file-url.
+            // NSPasteboardItem expects a property-list-compatible value: the URL string.
+            pbItem.setString(url.absoluteString, forType: .fileURL)
+            return pbItem
+        }
+        pasteboard.writeObjects(pbItems)
     }
 
     /// Dynamically resolve the key code for the "V" character.
@@ -74,6 +123,7 @@ final class PasteService {
 
     /// Copy item to clipboard only (no auto-paste). Updates usage stats.
     static func copyToClipboard(_ item: ClipItem) {
+        let begin = beginSelfPaste()
         let pasteboard = NSPasteboard.general
         pasteboard.clearContents()
 
@@ -85,21 +135,12 @@ final class PasteService {
                 pasteboard.setData(data, forType: .png)
             }
         case "file":
-            if let bookmarkData = item.fileBookmarks {
-                let bookmarks = Self.decodeFileBookmarks(bookmarkData)
-                var isStale = false
-                let urls: [URL] = bookmarks.compactMap {
-                    try? URL(resolvingBookmarkData: $0, options: [], bookmarkDataIsStale: &isStale)
-                }
-                if !urls.isEmpty {
-                    pasteboard.writeObjects(urls as [NSURL])
-                }
-            }
+            writeFileItemsToPasteboard(item, pasteboard: pasteboard)
         default:
             break
         }
 
-        markSelfPaste()
+        endSelfPaste(begin: begin)
     }
 
     static func paste(_ item: ClipItem, context: ModelContext) {
@@ -110,6 +151,7 @@ final class PasteService {
             return
         }
 
+        let begin = beginSelfPaste()
         let pasteboard = NSPasteboard.general
         pasteboard.clearContents()
 
@@ -121,21 +163,12 @@ final class PasteService {
                 pasteboard.setData(data, forType: .png)
             }
         case "file":
-            if let bookmarkData = item.fileBookmarks {
-                let bookmarks = Self.decodeFileBookmarks(bookmarkData)
-                var isStale = false
-                let urls: [URL] = bookmarks.compactMap {
-                    try? URL(resolvingBookmarkData: $0, options: [], bookmarkDataIsStale: &isStale)
-                }
-                if !urls.isEmpty {
-                    pasteboard.writeObjects(urls as [NSURL])
-                }
-            }
+            writeFileItemsToPasteboard(item, pasteboard: pasteboard)
         default:
             break
         }
 
-        markSelfPaste()
+        endSelfPaste(begin: begin)
 
         // Simulate Cmd+V via CGEvent
         let source = CGEventSource(stateID: .combinedSessionState)

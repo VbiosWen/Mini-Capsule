@@ -30,6 +30,9 @@ struct CapsuleView: View {
                     isCapturing: capsuleVM.isCapturing,
                     collapsedStyle: settings.collapsedStyle
                 )
+                .onTapGesture {
+                    capsuleVM.toggleExpanded()
+                }
             }
         }
         .opacity(capsuleVM.windowOpacity)
@@ -54,6 +57,9 @@ struct CapsuleView: View {
         }
         .onReceive(NotificationCenter.default.publisher(for: .capsuleDidResignKey)) { _ in
             capsuleVM.collapse()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .capsuleShouldToggleExpand)) { _ in
+            capsuleVM.toggleExpanded()
         }
         .onChange(of: items.first?.id) { _, _ in
             capsuleVM.onNewItemCaptured()

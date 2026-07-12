@@ -87,6 +87,26 @@ final class CapsuleViewModel {
         postExpandedNotification()
     }
 
+    // MARK: - Click Toggle
+
+    func toggleExpanded() {
+        hoverTask?.cancel()
+        if isExpanded {
+            collapse()
+        } else {
+            isExpandingReady = false
+            withAnimation(.spring(response: 0.35, dampingFraction: 0.75)) {
+                isExpanded = true
+            }
+            postExpandedNotification()
+            Task { [weak self] in
+                guard let self else { return }
+                try? await Task.sleep(for: .milliseconds(350))
+                self.isExpandingReady = true
+            }
+        }
+    }
+
     // MARK: - Drag State
 
     func onDragStart() {

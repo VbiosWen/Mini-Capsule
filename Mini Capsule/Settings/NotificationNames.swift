@@ -10,6 +10,10 @@ extension Notification.Name {
     /// Posted when the floating panel visibility toggle changes.
     /// UserInfo contains `["show": Bool]`.
     static let showFloatingPanelChanged = Notification.Name("ShowFloatingPanelChanged")
+
+    /// Posted when the menu bar visibility toggle changes.
+    /// UserInfo contains `["show": Bool]`.
+    static let showInMenuBarChanged = Notification.Name("ShowInMenuBarChanged")
 }
 
 // MARK: - Capsule Notifications
@@ -55,4 +59,8 @@ extension Notification.Name {
 
     /// Posted when the capsule collapses so consumers can drop heavy caches.
     static let capsuleShouldPurgeCaches = Notification.Name("capsuleShouldPurgeCaches")
+
+    /// Posted by CapsuleAppDelegate.applicationShouldHandleReopen to request
+    /// the capsule view to toggle expanded/collapsed state.
+    static let capsuleShouldToggleExpand = Notification.Name("capsuleShouldToggleExpand")
 }

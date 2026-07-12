@@ -1,0 +1,40 @@
+{
+  "configurations" : [
+    {
+      "id" : "B0F1A2C3-D4E5-6789-ABCD-EF0123456789",
+      "name" : "fast",
+      "options" : {
+        "environmentVariableEntries" : [
+          { "key" : "MC_TEST_LOG_DIR", "value" : "$(SRCROOT)/TestResults/current" }
+        ]
+      }
+    },
+    {
+      "id" : "C1D2E3F4-A5B6-7890-ABCD-EF0123456789",
+      "name" : "full",
+      "options" : {
+        "environmentVariableEntries" : [
+          { "key" : "MC_TEST_LOG_DIR", "value" : "$(SRCROOT)/TestResults/current" }
+        ]
+      }
+    }
+  ],
+  "defaultOptions" : {
+    "codeCoverage" : {
+      "targets" : [
+        { "containerPath" : "container:Mini Capsule.xcodeproj", "identifier" : "Mini Capsule", "name" : "Mini Capsule" }
+      ]
+    }
+  },
+  "testTargets" : [
+    {
+      "target" : { "containerPath" : "container:Mini Capsule.xcodeproj", "identifier" : "Mini CapsuleTests", "name" : "Mini CapsuleTests" }
+    },
+    {
+      "enabled" : false,
+      "selectedConfigurations" : [ "C1D2E3F4-A5B6-7890-ABCD-EF0123456789" ],
+      "target" : { "containerPath" : "container:Mini Capsule.xcodeproj", "identifier" : "Mini CapsuleUITests", "name" : "Mini CapsuleUITests" }
+    }
+  ],
+  "version" : 1
+}

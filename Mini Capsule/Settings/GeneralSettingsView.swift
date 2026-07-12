@@ -22,26 +22,23 @@ struct GeneralSettingsView: View {
                     }
 
                 Toggle("菜单栏显示", isOn: Bindable(settings).showInMenuBar)
-                    .onChange(of: settings.showInMenuBar) { _, _ in
-                        ensureOneModeEnabled()
+                    .onChange(of: settings.showInMenuBar) { _, newValue in
+                        NotificationCenter.default.post(
+                            name: .showInMenuBarChanged,
+                            object: nil,
+                            userInfo: ["show": newValue]
+                        )
+                        ensureOneModeEnabled(revertingMenuBar: true)
                     }
 
                 Toggle("屏幕悬浮窗", isOn: Bindable(settings).showFloatingPanel)
                     .onChange(of: settings.showFloatingPanel) { _, newValue in
-                        ensureOneModeEnabled()
-                        if newValue {
-                            NotificationCenter.default.post(
-                                name: .showFloatingPanelChanged,
-                                object: nil,
-                                userInfo: ["show": true]
-                            )
-                        } else {
-                            NotificationCenter.default.post(
-                                name: .showFloatingPanelChanged,
-                                object: nil,
-                                userInfo: ["show": false]
-                            )
-                        }
+                        ensureOneModeEnabled(revertingMenuBar: false)
+                        NotificationCenter.default.post(
+                            name: .showFloatingPanelChanged,
+                            object: nil,
+                            userInfo: ["show": newValue]
+                        )
                     }
             } header: {
                 Text("展示")
@@ -110,9 +107,16 @@ struct GeneralSettingsView: View {
         NotificationCenter.default.post(name: .resetCapsulePosition, object: nil)
     }
 
-    private func ensureOneModeEnabled() {
+    /// Prevent turning off the last remaining display mode. Reverts whichever
+    /// toggle the user just switched (indicated by `revertingMenuBar`) when
+    /// both modes would end up off.
+    private func ensureOneModeEnabled(revertingMenuBar: Bool) {
         if !settings.showInMenuBar && !settings.showFloatingPanel {
-            settings.showInMenuBar = true
+            if revertingMenuBar {
+                settings.showInMenuBar = true
+            } else {
+                settings.showFloatingPanel = true
+            }
         }
     }
 }
