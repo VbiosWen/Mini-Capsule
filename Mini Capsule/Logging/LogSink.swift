@@ -27,6 +27,3 @@ final class Log: LogSink, @unchecked Sendable {
         for sink in sinks { sink.write(event) }
     }
 }
-
-// TEMP stub — replaced by a real file in Task 4.
-final class FileSink: LogSink, @unchecked Sendable { func write(_ event: LogEvent) {} }
